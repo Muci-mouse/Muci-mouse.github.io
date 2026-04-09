@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOY 桌宠</title>
+  <style>
+    :root {
+      --pet-size: 210px;
+      --pet-left: calc(100vw - 246px);
+      --pet-top: calc(100vh - 340px);
+      --jump-offset: 0px;
+      --rebound-x: 0px;
+      --rebound-y: 0px;
+      --fx: 6.6s;
+      --fy: 4.1s;
+      --tilt: 5.2s;
+      --body: 3.3s;
+      --eye: 2.2s;
+      --mouth: 1.8s;
+      --hair1: 2.7s;
+      --hair2: 3.1s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    }
+
+    body {
+      pointer-events: none;
+    }
+
+    .pet {
+      position: fixed;
+      left: var(--pet-left);
+      top: var(--pet-top);
+      width: var(--pet-size);
+      aspect-ratio: 1;
+      pointer-events: auto;
+      touch-action: none;
+      cursor: grab;
+      z-index: 30;
+      filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.28));
+    }
+
+    .pet.dragging {
+      cursor: grabbing;
+    }
+
+    .pet.rebound {
+      animation: petRebound 460ms cubic-bezier(0.22, 0.9, 0.3, 1);
+    }
+
+    .pet.jump .pet-body {
+      animation: petBodyJump 320ms cubic-bezier(0.22, 0.9, 0.3, 1);
+    }
+
+    .pet-shell,
+    .motion-x,
+    .motion-y,
+    .motion-tilt,
+    .pet-body {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pet-shell {
+      transform: translateY(var(--jump-offset));
+    }
+
+    .motion-x {
+      animation: driftX var(--fx) ease-in-out infinite;
+    }
+
+    .motion-y {
+      animation: driftY var(--fy) ease-in-out infinite;
+    }
+
+    .motion-tilt {
+      animation: sway var(--tilt) ease-in-out infinite;
+      transform-origin: center 74%;
+    }
+
+    .pet.dragging .motion-x,
+    .pet.dragging .motion-y,
+    .pet.dragging .motion-tilt,
+    .pet.dragging img {
+      animation-play-state: paused;
+    }
+
+    .pet img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      transform-origin: center;
+    }
+
+    .part-hair2 {
+      transform-origin: center top;
+      animation: hairBack var(--hair2) ease-in-out infinite;
+    }
+
+    .part-body {
+      animation: bodyMove var(--body) ease-in-out infinite;
+    }
+
+    .part-eye {
+      animation: eyeMove var(--eye) ease-in-out infinite;
+    }
+
+    .part-mouth {
+      animation: mouthMove var(--mouth) ease-in-out infinite;
+    }
+
+    .pet-body {
+      z-index: 1;
+    }
+
+    .counter {
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 0px);
+      transform: translateX(-50%);
+      min-width: 190px;
+      padding: 10px 14px;
+      border: 4px solid #35212a;
+      background: #f8d8de;
+      box-shadow: 0 0 0 4px #fff6f8, 6px 6px 0 #35212a;
+      image-rendering: pixelated;
+      color: #2e1821;
+      font-family: "Courier New", monospace;
+      pointer-events: auto;
+    }
+
+    .counter-value {
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      border: 3px solid #35212a;
+      background: #fff9fb;
+      font-size: 18px;
+      line-height: 1;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes driftX {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(10px); }
+      50% { transform: translateX(-8px); }
+      75% { transform: translateX(7px); }
+    }
+
+    @keyframes driftY {
+      0%,100% { transform: translateY(0); }
+      30% { transform: translateY(-16px); }
+      55% { transform: translateY(-24px); }
+      80% { transform: translateY(-10px); }
+    }
+
+    @keyframes sway {
+      0%,100% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(1deg) scale(1.003); }
+      55% { transform: rotate(-1.2deg) scale(0.998); }
+      78% { transform: rotate(0.7deg) scale(1.002); }
+    }
+
+    @keyframes bodyMove {
+      0%,100% { transform: translate(0, 0) scale(1); }
+      35% { transform: translate(0.5px, -3px) scale(1.01, 1.006); }
+      60% { transform: translate(-0.4px, -1px) scale(0.997, 1.01); }
+    }
+
+    @keyframes eyeMove {
+      0%,100% { transform: translate(0, 0); }
+      25% { transform: translate(1px, -0.8px); }
+      62% { transform: translate(-0.8px, 0.5px); }
+    }
+
+    @keyframes mouthMove {
+      0%,100% { transform: translateY(0) scale(1); }
+      40% { transform: translateY(1px) scale(0.985, 1.015); }
+      72% { transform: translateY(-0.4px) scale(1.01, 0.99); }
+    }
+
+    @keyframes hairFront {
+      0%,100% { transform: rotate(0deg) translateY(0); }
+      28% { transform: rotate(1.8deg) translate(0.8px, -2px); }
+      60% { transform: rotate(-1.5deg) translate(-0.8px, -1px); }
+    }
+
+    @keyframes hairBack {
+      0%,100% { transform: rotate(0deg) translateY(0); }
+      22% { transform: rotate(-1deg) translate(-0.6px, -1.2px); }
+      54% { transform: rotate(1.4deg) translate(0.7px, -2px); }
+      78% { transform: rotate(-0.8deg) translate(-0.3px, -1px); }
+    }
+
+    @keyframes petRebound {
+      0% { transform: translate(0, 0); }
+      40% { transform: translate(var(--rebound-x), var(--rebound-y)); }
+      70% { transform: translate(calc(var(--rebound-x) * -0.4), calc(var(--rebound-y) * -0.4)); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes petBodyJump {
+      0% { transform: translate(0, 0) scale(1, 1); }
+      22% { transform: translate(0, -4pt) scale(0.985, 1.03); }
+      46% { transform: translate(0, -7pt) scale(1.015, 0.975); }
+      66% { transform: translate(0, 0.5pt) scale(1.02, 0.97); }
+      84% { transform: translate(0, -2pt) scale(0.992, 1.01); }
+      100% { transform: translate(0, 0) scale(1, 1); }
+    }
+  </style>
+</head>
+<body>
+  <section class="pet" id="pet">
+    <div class="pet-shell" id="petShell">
+      <div class="motion-x">
+        <div class="motion-y">
+          <div class="motion-tilt">
+            <div class="pet-body">
+              <img class="part-hair2" src="./jb/hair2/1.PNG" alt="后发" />
+              <img class="part-body" src="./jb/benti/1.PNG" alt="本体" />
+              <img class="part-eye" src="./jb/eye/1.PNG" alt="眼睛" />
+              <img class="part-mouth" src="./jb/mouse/1.PNG" alt="嘴巴" />
+              <img class="part-hair1" src="./jb/hair1/1.PNG" alt="前发" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="counter">
+        <span class="counter-value" id="countValue">0</span>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const pet = document.getElementById('pet');
+    const countValue = document.getElementById('countValue');
+    const POS_KEY = 'moyDesktopPetPos';
+    const COUNT_KEY = 'moyDesktopPetSingleCount';
+    let count = 0;
+    let eyeManualPlaying = false;
+    let eyeManualResetTimer = null;
+    let irritationMode = false;
+    let irritationTransitioning = false;
+    let petClickCount = 0;
+    let petClickWindowStart = Date.now();
+    let irritationThreshold = Math.floor(Math.random() * 16) + 15;
+    const petEye = document.querySelector('.part-eye');
+    const petMouth = document.querySelector('.part-mouth');
+
+    const randomInRange = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
+    const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+
+    function applyRandomMotion() {
+      pet.style.setProperty('--fx', `${randomInRange(5.8, 7.6)}s`);
+      pet.style.setProperty('--fy', `${randomInRange(3.6, 4.8)}s`);
+      pet.style.setProperty('--tilt', `${randomInRange(4.7, 6.1)}s`);
+      pet.style.setProperty('--body', `${randomInRange(2.8, 3.8)}s`);
+      pet.style.setProperty('--eye', `${randomInRange(1.8, 2.6)}s`);
+      pet.style.setProperty('--mouth', `${randomInRange(1.5, 2.1)}s`);
+      pet.style.setProperty('--hair1', `${randomInRange(2.2, 3.1)}s`);
+      pet.style.setProperty('--hair2', `${randomInRange(2.6, 3.5)}s`);
+    }
+
+    function renderCount() {
+      countValue.textContent = String(count);
+      localStorage.setItem(COUNT_KEY, String(count));
+    }
+
+    function bumpPet() {
+      pet.classList.remove('jump');
+      void pet.offsetWidth;
+      pet.classList.add('jump');
+    }
+
+    function registerActivityTick() {
+      count += 1;
+      renderCount();
+      bumpPet();
+    }
+
+    function getDefaultPosition() {
+      const left = Math.max(12, window.innerWidth - pet.offsetWidth - 36);
+      const top = Math.max(12, window.innerHeight - pet.offsetHeight - 132);
+      return { left, top };
+    }
+
+    function setPosition(left, top, shouldSave = true) {
+      const maxLeft = Math.max(12, window.innerWidth - pet.offsetWidth - 12);
+      const maxTop = Math.max(12, window.innerHeight - pet.offsetHeight - 12);
+      const nextLeft = clamp(left, 12, maxLeft);
+      const nextTop = clamp(top, 12, maxTop);
+      pet.style.setProperty('--pet-left', `${nextLeft}px`);
+      pet.style.setProperty('--pet-top', `${nextTop}px`);
+      if (shouldSave) {
+        localStorage.setItem(POS_KEY, JSON.stringify({ left: nextLeft, top: nextTop }));
+      }
+    }
+
+    function restorePosition() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(POS_KEY) || '{}');
+        if (Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+          setPosition(saved.left, saved.top, false);
+          return;
+        }
+      } catch (error) {
+        // ignore
+      }
+      const initial = getDefaultPosition();
+      setPosition(initial.left, initial.top, false);
+    }
+
+    function loadCount() {
+      count = Number(localStorage.getItem(COUNT_KEY)) || 0;
+      renderCount();
+    }
+
+    function resetPetClickBurst() {
+      petClickCount = 0;
+      petClickWindowStart = Date.now();
+      irritationThreshold = Math.floor(Math.random() * 16) + 15;
+    }
+
+    function playEyeManual(gifSrc, gifPlayMs = 1500, stillSrc = './jb/eye/1.PNG') {
+      if (irritationMode || irritationTransitioning) {
+        return;
+      }
+      window.clearTimeout(eyeManualResetTimer);
+      eyeManualPlaying = true;
+      petEye.src = `${gifSrc}?t=${Date.now()}`;
+      eyeManualResetTimer = window.setTimeout(() => {
+        petEye.src = stillSrc;
+        eyeManualPlaying = false;
+        eyeManualResetTimer = null;
+      }, gifPlayMs);
+    }
+
+    function beginIrritationMode() {
+      if (irritationMode || irritationTransitioning) {
+        return;
+      }
+      irritationTransitioning = true;
+      eyeManualPlaying = true;
+      petEye.src = `./jb/eye/1b5.GIF?t=${Date.now()}`;
+      petMouth.src = `./jb/mouse/1b2.GIF?t=${Date.now()}`;
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/5.PNG';
+        petMouth.src = './jb/mouse/3.PNG';
+        eyeManualPlaying = false;
+        irritationTransitioning = false;
+        irritationMode = true;
+      }, 1400);
+    }
+
+    function endIrritationMode() {
+      if (!irritationMode || irritationTransitioning) {
+        return;
+      }
+      irritationTransitioning = true;
+      irritationMode = false;
+      eyeManualPlaying = true;
+      petEye.src = `./jb/eye/5b1.GIF?t=${Date.now()}`;
+      petMouth.src = `./jb/mouse/3b2.GIF?t=${Date.now()}`;
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        petMouth.src = './jb/mouse/1.PNG';
+        eyeManualPlaying = false;
+        irritationTransitioning = false;
+        resetPetClickBurst();
+      }, 1400);
+    }
+
+    function registerPetBurstClick() {
+      const now = Date.now();
+      if (now - petClickWindowStart > 30000) {
+        resetPetClickBurst();
+      }
+      petClickCount += 1;
+      if (petClickCount >= irritationThreshold) {
+        beginIrritationMode();
+      }
+    }
+
+    function handlePetTap(event) {
+      registerActivityTick();
+      if (irritationMode) {
+        endIrritationMode();
+        return;
+      }
+      registerPetBurstClick();
+      const rect = pet.getBoundingClientRect();
+      const ratio = (event.clientX - rect.left) / rect.width;
+      if (ratio < 0.33) {
+        playEyeManual('./jb/eye/zyz.GIF');
+      } else if (ratio > 0.66) {
+        playEyeManual('./jb/eye/yzz.GIF');
+      } else {
+        playEyeManual('./jb/eye/zy.GIF');
+      }
+    }
+
+    function enableDrag() {
+      let dragging = false;
+      let moved = false;
+      let offsetX = 0;
+      let offsetY = 0;
+      let lastX = 0;
+      let lastY = 0;
+      let velocityX = 0;
+      let velocityY = 0;
+
+      pet.addEventListener('pointerdown', (event) => {
+        dragging = true;
+        moved = false;
+        pet.classList.add('dragging');
+        pet.classList.remove('rebound');
+        pet.setPointerCapture(event.pointerId);
+        const rect = pet.getBoundingClientRect();
+        offsetX = event.clientX - rect.left;
+        offsetY = event.clientY - rect.top;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        velocityX = 0;
+        velocityY = 0;
+      });
+
+      pet.addEventListener('pointermove', (event) => {
+        if (!dragging) {
+          return;
+        }
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        velocityX = dx;
+        velocityY = dy;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          moved = true;
+        }
+        setPosition(event.clientX - offsetX, event.clientY - offsetY);
+      });
+
+      function stopDrag(event) {
+        if (!dragging) {
+          return;
+        }
+        dragging = false;
+        pet.classList.remove('dragging');
+        pet.style.setProperty('--rebound-x', `${clamp(velocityX * 2.2, -16, 16)}px`);
+        pet.style.setProperty('--rebound-y', `${clamp(velocityY * 2.2, -16, 16)}px`);
+        pet.classList.remove('rebound');
+        void pet.offsetWidth;
+        pet.classList.add('rebound');
+        if (pet.hasPointerCapture(event.pointerId)) {
+          pet.releasePointerCapture(event.pointerId);
+        }
+        if (!moved) {
+          handlePetTap(event);
+        }
+      }
+
+      pet.addEventListener('pointerup', stopDrag);
+      pet.addEventListener('pointercancel', stopDrag);
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+      if (data.type !== 'moy-activity') {
+        return;
+      }
+      registerActivityTick();
+    });
+
+    window.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('.counter')) {
+        return;
+      }
+      if (event.target.closest('.pet')) {
+        return;
+      }
+      registerActivityTick();
+    });
+
+    window.addEventListener('keydown', () => {
+      registerActivityTick();
+    });
+
+    window.addEventListener('resize', restorePosition);
+
+    applyRandomMotion();
+    loadCount();
+    restorePosition();
+    resetPetClickBurst();
+    enableDrag();
+  </script>
+</body>
+</html>

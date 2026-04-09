@@ -1,0 +1,2656 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOY - ym</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif; background: #ffffff; transition: background-color 0.45s ease; }
+    .page { width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .di-background {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.35s ease;
+    }
+    .right-panel { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-evenly; align-items: flex-start; padding: 10px 0; z-index: 12; }
+    .anjian-btn { border: none; border-radius: 0; background: transparent; padding: 0; margin: 0; cursor: pointer; line-height: 0; transition: transform 0.18s ease, filter 0.18s ease; }
+    .anjian-btn img { display: block; width: auto; height: 11.11vh; object-fit: contain; pointer-events: none; }
+    .anjian-btn:hover { transform: translateX(2px); filter: brightness(1.03); }
+    .anjian-btn.active { transform: translateX(-25%); filter: none; }
+    .center-stage { width: min(88vw, 1280px); height: min(96vh, 1280px); display: flex; align-items: center; justify-content: center; position: relative; z-index: 6; }
+    .center-image { width: 100%; height: 100%; object-fit: contain; display: block; opacity: 1; transform: scale(1); transition: opacity 0.32s cubic-bezier(0.4,0,0.2,1), transform 0.32s cubic-bezier(0.4,0,0.2,1); will-change: opacity, transform; backface-visibility: hidden; position: relative; z-index: 2; }
+    .center-image.switching { opacity: 0; transform: scale(0.982); }
+    .stage-pet {
+      position: absolute;
+      left: var(--pet-left, 50%);
+      top: var(--pet-top, 70%);
+      width: var(--pet-size, 18%);
+      aspect-ratio: 1;
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      --drift-amp-mult: 1;
+      --bob-amp-mult: 1;
+      --motion-speed-mult: 1;
+      --part-motion-mult: 1;
+    }
+    .stage-pet.wake-shake-sleepy {
+      animation: wakeShakeSleepy 760ms cubic-bezier(0.2, 0.9, 0.25, 1);
+    }
+    .stage-pet.wake-shake-alert {
+      animation: wakeShakeAlert 320ms steps(5);
+    }
+    .pet-drift { position: relative; width: 100%; height: 100%; animation: petDrift calc(var(--drift-base-dur, 5.8s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--drift-del,0s); will-change: transform; }
+    .pet-bob { position: relative; width: 100%; height: 100%; animation: petBob calc(var(--bob-base-dur, 3.2s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--bob-del,0s); will-change: transform; }
+    .stage-pet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; transform-origin: center; }
+    .stage-pet .p-hair2 { transform-origin: center top; animation: hairSwing calc(var(--ha,2.3s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--ha-d,-1.1s); }
+    .stage-pet .p-body  { animation: bodyBreath calc(var(--bd,2.9s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--bd-d,-0.4s); }
+    .stage-pet .p-eye   { animation: eyeSway calc(var(--ey,1.9s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--ey-d,-0.7s); transition: transform 0.12s ease-out; }
+    .stage-pet .p-mouth { animation: mouthBop calc(var(--mo,1.6s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--mo-d,-0.3s); }
+    .stage-pet .p-hair1 { transform-origin: center top; animation: hairSwing calc(var(--ha,2.3s) * var(--motion-speed-mult, 1)) ease-in-out infinite var(--ha-d,-1.1s); }
+    @keyframes wakeShakeSleepy { 0%,100%{transform:translate(-50%, -50%) rotate(0deg)} 10%{transform:translate(calc(-50% - 7px), calc(-50% + 2px)) rotate(-3deg)} 20%{transform:translate(calc(-50% + 6px), calc(-50% - 3px)) rotate(3.4deg)} 34%{transform:translate(calc(-50% - 5px), calc(-50% + 4px)) rotate(-2.8deg)} 48%{transform:translate(calc(-50% + 7px), calc(-50% - 2px)) rotate(2.7deg)} 62%{transform:translate(calc(-50% - 4px), calc(-50% + 1px)) rotate(-1.8deg)} 76%{transform:translate(calc(-50% + 3px), calc(-50% - 1px)) rotate(1.2deg)} }
+    @keyframes wakeShakeAlert { 0%,100%{transform:translate(-50%, -50%) rotate(0deg)} 20%{transform:translate(calc(-50% - 6px), -50%) rotate(-2.6deg)} 40%{transform:translate(calc(-50% + 6px), -50%) rotate(2.6deg)} 60%{transform:translate(calc(-50% - 4px), calc(-50% + 1px)) rotate(-1.6deg)} 80%{transform:translate(calc(-50% + 4px), calc(-50% - 1px)) rotate(1.6deg)} }
+    @keyframes petBob    { 0%,100%{transform:translateY(0)}  50%{transform:translateY(calc(var(--bob-amp,-22px) * var(--bob-amp-mult, 1)))} }
+    @keyframes petDrift  { 0%,100%{transform:translateX(0)}  30%{transform:translateX(calc(var(--drift-amp,16px) * var(--drift-amp-mult, 1)))} 70%{transform:translateX(calc(var(--drift-amp,16px) * -0.75 * var(--drift-amp-mult, 1)))} }
+    @keyframes bodyBreath{ 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(calc(-2px * var(--part-motion-mult, 1))) scale(calc(1 + 0.01 * var(--part-motion-mult, 1)))} }
+    @keyframes eyeSway   { 0%,100%{transform:translate(0,0)} 30%{transform:translate(calc(1.5px * var(--part-motion-mult, 1)),calc(-0.8px * var(--part-motion-mult, 1)))} 70%{transform:translate(calc(-1px * var(--part-motion-mult, 1)),calc(0.4px * var(--part-motion-mult, 1)))} }
+    @keyframes mouthBop  { 0%,100%{transform:translateY(0) scaleX(1)} 45%{transform:translateY(calc(1px * var(--part-motion-mult, 1))) scaleX(calc(1 - 0.03 * var(--part-motion-mult, 1)))} }
+    @keyframes hairSwing { 0%,100%{transform:rotate(0deg) translateY(0)} 35%{transform:rotate(calc(2.2deg * var(--part-motion-mult, 1))) translateY(calc(-2px * var(--part-motion-mult, 1)))} 65%{transform:rotate(calc(-1.3deg * var(--part-motion-mult, 1))) translateY(calc(-0.8px * var(--part-motion-mult, 1)))} }
+    @keyframes moodFloat {
+      0% { opacity: 0; transform: translateY(0) scale(0.88); }
+      15% { opacity: 0.8; }
+      70% { opacity: 0.78; }
+      100% { opacity: 0; transform: translateY(-30vh) scale(1.05); }
+    }
+    .hudong-panel { position: absolute; right: 0; top: 0; height: 75%; display: flex; flex-direction: column; justify-content: space-evenly; align-items: flex-end; padding: 10px 0; z-index: 1300; pointer-events: auto; }
+    .hudong-btn { border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; line-height: 0; transition: transform 0.18s ease, filter 0.18s ease; position: relative; z-index: 30; }
+    .hudong-btn img { display: block; width: auto; height: 13.5vh; object-fit: contain; pointer-events: none; }
+    .hudong-btn:hover { transform: translateX(-3px); filter: brightness(1.05); }
+    .hudong-btn:active { transform: translateX(-1px) scale(0.97); }
+    .hair-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
+    .hair-overlay.open { opacity: 1; pointer-events: all; }
+    .hair-modal { background: #fff; border-radius: 18px; padding: 24px 28px 20px; width: min(680px,90vw); max-height: 82vh; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); transform: scale(0.94); transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
+    .hair-overlay.open .hair-modal { transform: scale(1); }
+    .hair-modal-header { display: flex; align-items: center; justify-content: space-between; }
+    .hair-modal-title { font-size: 17px; font-weight: 700; color: #222; }
+    .hair-close { border: none; background: none; cursor: pointer; font-size: 22px; color: #888; line-height: 1; padding: 2px 6px; border-radius: 8px; transition: background 0.15s; }
+    .hair-close:hover { background: #f0f0f0; color: #333; }
+    .hair-section-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+    .hair-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap: 10px; }
+    .hair-item { border: 2.5px solid transparent; border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color 0.15s, transform 0.15s; background: #f7f7f7; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+    .hair-item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .hair-item:hover { transform: scale(1.06); border-color: #bbb; }
+    .hair-item.selected { border-color: #333; }
+    .hair-sections { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .debug-status {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 1200;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(22, 22, 26, 0.78);
+      color: #f6f2ea;
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: none;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      backdrop-filter: blur(8px);
+      min-width: 170px;
+    }
+    .say-btn {
+      position: fixed;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      z-index: 1100;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+      line-height: 0;
+      transition: transform 0.16s ease, filter 0.16s ease;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.24));
+    }
+    .say-btn img {
+      display: block;
+      width: auto;
+      height: 16vh;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .say-btn:hover { transform: translateX(-50%) translateY(-2px); }
+    .say-btn.is-listening { transform: translateX(-50%) scale(0.9); }
+    .say-panel {
+      position: fixed;
+      right: 18px;
+      bottom: -52px;
+      transform: none;
+      z-index: 1090;
+      width: min(395px, calc(100vw - 44px));
+      height: 408px;
+      padding: 0;
+      background: url('./ym/dhk.PNG') center / 100% 100% no-repeat;
+      color: #5b3e45;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      overflow: hidden;
+    }
+    .say-panel-inner {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 88px 38px 44px 36px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .say-status {
+      flex: 0 0 auto;
+      max-width: 100%;
+      font-size: 13px;
+      color: #8b6871;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+    }
+    .say-user, .say-reply {
+      max-width: 100%;
+      font-size: 16px;
+      line-height: 1.78;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+    }
+    .say-history {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(120, 87, 95, 0.38) transparent;
+    }
+    .say-history::-webkit-scrollbar {
+      width: 6px;
+    }
+    .say-history::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .say-history::-webkit-scrollbar-thumb {
+      background: rgba(120, 87, 95, 0.38);
+      border-radius: 999px;
+    }
+    .say-entry {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 2px;
+    }
+    .say-entry-user, .say-entry-reply {
+      font-size: 15px;
+      line-height: 1.72;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .say-entry-user {
+      color: #7b5d66;
+    }
+    .say-entry-reply {
+      color: #433136;
+    }
+    .say-user {
+      flex: 0 0 auto;
+      min-height: 0;
+      max-height: 80px;
+      color: #7b5d66;
+      margin-bottom: 10px;
+      display: block;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(150, 113, 121, 0.34) transparent;
+    }
+    .say-user::-webkit-scrollbar {
+      width: 6px;
+    }
+    .say-user::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .say-user::-webkit-scrollbar-thumb {
+      background: rgba(150, 113, 121, 0.34);
+      border-radius: 999px;
+    }
+    .say-reply {
+      flex: 0 0 auto;
+      min-height: 52px;
+      max-height: 84px;
+      color: #433136;
+      display: block;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      margin-bottom: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(120, 87, 95, 0.38) transparent;
+    }
+    .say-reply::-webkit-scrollbar {
+      width: 6px;
+    }
+    .say-reply::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .say-reply::-webkit-scrollbar-thumb {
+      background: rgba(120, 87, 95, 0.38);
+      border-radius: 999px;
+    }
+    .food-cloud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 18;
+    }
+    .mood-cloud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .mood-item {
+      position: fixed;
+      bottom: -6vh;
+      width: clamp(48px, 6vw, 88px);
+      aspect-ratio: 1;
+      object-fit: contain;
+      opacity: 0;
+      filter: drop-shadow(0 8px 14px rgba(255,255,255,0.18));
+      animation: moodFloat 3s ease-in forwards;
+    }
+    .food-item {
+      position: fixed;
+      width: clamp(81px, 10.5vw, 144px);
+      aspect-ratio: 1;
+      object-fit: contain;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7);
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,0.14));
+    }
+    .food-item.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .camera-feed {
+      position: fixed;
+      right: 20px;
+      top: 20px;
+      width: 168px;
+      border-radius: 16px;
+      transform: scaleX(-1);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 900;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+      transition: opacity 0.2s ease;
+    }
+    .camera-feed.active { opacity: 0.92; }
+    .gesture-cursor {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.95);
+      background: rgba(255, 174, 197, 0.5);
+      box-shadow: 0 0 0 10px rgba(255,174,197,0.14), 0 10px 24px rgba(0,0,0,0.18);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1150;
+    }
+    .gesture-cursor.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .gesture-cursor.pinching {
+      background: rgba(255, 122, 168, 0.82);
+      transform: translate(-50%, -50%) scale(0.84);
+    }
+    .gesture-hand {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 146px;
+      height: 146px;
+      object-fit: contain;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.82);
+      transform-origin: center center;
+      pointer-events: none;
+      z-index: 1140;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      filter: drop-shadow(0 14px 24px rgba(0,0,0,0.18));
+    }
+    .gesture-hand.active {
+      opacity: 0.95;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <img class="di-background" id="diBackground" src="./ym/di/1.PNG" alt="背景底图" />
+    <aside class="right-panel" id="anjianList"></aside>
+    <div class="center-stage">
+      <div class="stage-pet" id="stagePet">
+        <div class="pet-drift">
+          <div class="pet-bob">
+            <img class="p-hair2" id="petHair2" src="" alt="后发" style="display:none" />
+            <img class="p-body" src="./jb/benti/1.PNG" alt="本体" />
+            <img class="p-eye" id="petEye" src="./jb/eye/1.PNG" alt="眼睛" />
+            <img class="p-mouth" id="petMouth" src="./jb/mouse/1.PNG" alt="嘴巴" />
+            <img class="p-hair1" id="petHair1" src="./jb/hair1/1.PNG" alt="前发" />
+          </div>
+        </div>
+      </div>
+      <img class="center-image" id="waikeImage" src="./ym/waike/1.PNG" alt="waike 1" />
+    </div>
+    <aside class="hudong-panel" id="hudongPanel">
+      <button class="hudong-btn" type="button"><img src="./ym/hudong/1.PNG" alt="hudong 1" /></button>
+      <button class="hudong-btn" type="button"><img src="./ym/hudong/2.PNG" alt="hudong 2" /></button>
+      <button class="hudong-btn" id="hairBtn" type="button"><img src="./ym/hudong/3.PNG" alt="hudong 3" /></button>
+      <a class="hudong-btn" id="homeBtn" href="./index.html?showPet=1"><img src="./ym/hudong/4.PNG" alt="hudong 4" /></a>
+    </aside>
+  </main>
+  <div class="say-panel" id="sayPanel">
+    <div class="say-panel-inner">
+      <div class="say-status" id="sayStatus"></div>
+      <div class="say-user" id="sayUser">你：还没有开始说话。</div>
+      <div class="say-reply" id="sayReply">Moy：我在这里，想听你说今天发生的事。</div>
+      <div class="say-history" id="sayHistory"></div>
+    </div>
+  </div>
+  <div class="mood-cloud" id="moodCloud"></div>
+  <video class="camera-feed" id="cameraFeed" autoplay playsinline muted></video>
+  <div class="gesture-cursor" id="gestureCursor"></div>
+  <img class="gesture-hand" id="gestureHand" alt="gesture hand" />
+  <div class="food-cloud" id="foodCloud"></div>
+  <button class="say-btn" id="sayBtn" type="button" title="按住说话，松开发送">
+    <img src="./ym/say.PNG" alt="say" />
+  </button>
+  <div class="debug-status" id="debugStatus">waike: 1<br>切换状态: 空闲<br>发型框: 关闭</div>
+  <div class="hair-overlay" id="hairOverlay">
+    <div class="hair-modal">
+      <div class="hair-modal-header">
+        <span class="hair-modal-title">选择发型</span>
+        <button class="hair-close" id="hairClose" type="button">&#x2715;</button>
+      </div>
+      <div class="hair-sections">
+        <div>
+          <div class="hair-section-label">前发</div>
+          <div class="hair-grid" id="hair1Grid"></div>
+        </div>
+        <div>
+          <div class="hair-section-label">后发</div>
+          <div class="hair-grid" id="hair2Grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script>
+    const total = 6;
+    const anjianList = document.getElementById('anjianList');
+    const waikeImage = document.getElementById('waikeImage');
+    const diBackground = document.getElementById('diBackground');
+    const debugStatus = document.getElementById('debugStatus');
+    const sayBtn = document.getElementById('sayBtn');
+    const foodCloud = document.getElementById('foodCloud');
+    const moodCloud = document.getElementById('moodCloud');
+    const cameraFeed = document.getElementById('cameraFeed');
+    const gestureCursor = document.getElementById('gestureCursor');
+    const gestureHand = document.getElementById('gestureHand');
+    const sayPanel = document.getElementById('sayPanel');
+    const sayStatus = document.getElementById('sayStatus');
+    const sayUser = document.getElementById('sayUser');
+    const sayReply = document.getElementById('sayReply');
+    const sayHistory = document.getElementById('sayHistory');
+    let currentIndex = 1, switching = false;
+
+    const stagePet = document.getElementById('stagePet');
+    const centerStage = document.querySelector('.center-stage');
+    const petEye = document.getElementById('petEye');
+    const petMouth = document.getElementById('petMouth');
+    const petDrift = document.querySelector('.pet-drift');
+    const petBob = document.querySelector('.pet-bob');
+    let eyeManualPlaying = false;
+    let eyeManualResetTimer = null;
+    let mouthManualPlaying = false;
+    let focusFaceMode = false;
+    let focusFaceEnding = false;
+    let focusFaceEyeTimer = null;
+    let focusFaceMouthTimer = null;
+    let talkingMouthLoop = false;
+    let talkingMouthTimer = null;
+    let conversationEmotion = '';
+    let emotionEyeEnding = false;
+    let emotionEyeTimer = null;
+    let waikeHitRect = null;
+    let idleTimer = null;
+    let idleMode = null;
+    let idleAwakening = false;
+    let alertAftershockTimer = null;
+    let irritationMode = false;
+    let irritationTransitioning = false;
+    let irritationRecoveryTimer = null;
+    let petClickCount = 0;
+    let petClickWindowStart = Date.now();
+    let irritationThreshold = Math.floor(Math.random() * 16) + 15;
+    let speechBuffer = '';
+    let isPressTalking = false;
+    let aliyunSpeechSession = null;
+    let sharedMicStream = null;
+    let sharedMicReadyPromise = null;
+    let foodShown = false;
+    let mediaPipeMode = null;
+    let handsTracker = null;
+    let mediaPipeCamera = null;
+    let mediaPipeStream = null;
+    let mediaPipeStreamPromise = null;
+    let preferredCameraId = window.localStorage.getItem('moyPreferredCameraId') || '';
+    let pinchActive = false;
+    let smoothedGesture = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 };
+    let pettingMouthMode = false;
+    let pettingMouthEnding = false;
+    let pettingMouthTimer = null;
+    let feedingDragMode = false;
+    let feedingDragTimer = null;
+    let feedingMoodResetTimer = null;
+    let feedCount = 0;
+    let draggingFoodEl = null;
+    let trackedGesture = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5, pinch: false, handedness: 'Right' };
+    let moySpeechAudio = null;
+    let moySpeechObjectUrl = '';
+    let backgroundMusicAudio = null;
+    let backgroundMusicEnabled = true;
+    const BACKGROUND_MUSIC_SRC = './1.mp3';
+    const DIALOGUE_HISTORY_STORAGE_KEY = 'moyConversationHistory';
+    const RELATIONSHIP_MEMORY_STORAGE_KEY = 'moyRelationshipMemory';
+    const conversationHistory = [];
+    const relationshipMemory = {
+      likes: [],
+      worries: [],
+      relationshipProgress: [],
+      recurringPeopleAndThings: [],
+    };
+    const MAX_CONVERSATION_TURNS = 12;
+    function rf(a,b){ return (Math.random()*(b-a)+a).toFixed(2); }
+    stagePet.style.setProperty('--drift-del', '-'+rf(0.5,5.0)+'s');
+    stagePet.style.setProperty('--bob-del',   '-'+rf(0.2,3.5)+'s');
+    stagePet.style.setProperty('--bd',  rf(2.4,3.6)+'s');
+    stagePet.style.setProperty('--bd-d','-'+rf(0.1,2.8)+'s');
+    stagePet.style.setProperty('--ey',  rf(1.4,2.4)+'s');
+    stagePet.style.setProperty('--ey-d','-'+rf(0.1,1.8)+'s');
+    stagePet.style.setProperty('--mo',  rf(1.1,2.0)+'s');
+    stagePet.style.setProperty('--mo-d','-'+rf(0.1,1.4)+'s');
+    stagePet.style.setProperty('--ha',  rf(1.9,3.1)+'s');
+    stagePet.style.setProperty('--ha-d','-'+rf(0.1,2.2)+'s');
+
+    function hideFoodAroundWaike() {
+      const items = foodCloud.querySelectorAll('.food-item');
+      items.forEach((item) => item.classList.remove('show'));
+      window.setTimeout(() => {
+        if (!foodShown) {
+          foodCloud.innerHTML = '';
+        }
+      }, 280);
+      stopFeedingDragMode();
+      updateDebugStatus('食物消失');
+    }
+
+    function spawnMoodBurst(imageIndex, count = 9) {
+      if (!moodCloud) {
+        return;
+      }
+      moodCloud.innerHTML = '';
+      for (let i = 0; i < count; i += 1) {
+        const img = document.createElement('img');
+        img.className = 'mood-item';
+        img.src = `./mood/${imageIndex}.PNG`;
+        img.alt = `mood ${imageIndex}`;
+        img.style.left = `${8 + Math.random() * 84}vw`;
+        img.style.animationDelay = `${Math.random() * 0.5}s`;
+        img.style.animationDuration = `${2.5 + Math.random() * 0.7}s`;
+        img.style.transform = `translateY(0) scale(${0.82 + Math.random() * 0.42})`;
+        moodCloud.appendChild(img);
+        window.setTimeout(() => {
+          img.remove();
+        }, 3200);
+      }
+    }
+
+    function triggerPetMoodBurst(imageIndex) {
+      spawnMoodBurst(imageIndex);
+    }
+
+    function ensureBackgroundMusic() {
+      if (backgroundMusicAudio) {
+        return backgroundMusicAudio;
+      }
+      backgroundMusicAudio = new Audio(BACKGROUND_MUSIC_SRC);
+      backgroundMusicAudio.loop = true;
+      backgroundMusicAudio.preload = 'auto';
+      backgroundMusicAudio.volume = 0.42;
+      return backgroundMusicAudio;
+    }
+
+    async function playBackgroundMusic(forceResume = false) {
+      if (!backgroundMusicEnabled && !forceResume) {
+        return;
+      }
+      const bgm = ensureBackgroundMusic();
+      try {
+        await bgm.play();
+      } catch (error) {
+        const resumeOnInteraction = async () => {
+          document.removeEventListener('pointerdown', resumeOnInteraction);
+          document.removeEventListener('keydown', resumeOnInteraction);
+          if (backgroundMusicEnabled) {
+            try {
+              await bgm.play();
+            } catch (playError) {
+              // ignore
+            }
+          }
+        };
+        document.addEventListener('pointerdown', resumeOnInteraction, { once: true });
+        document.addEventListener('keydown', resumeOnInteraction, { once: true });
+      }
+    }
+
+    function pauseBackgroundMusic() {
+      if (backgroundMusicAudio && !backgroundMusicAudio.paused) {
+        backgroundMusicAudio.pause();
+      }
+    }
+
+    function stopBackgroundMusic() {
+      backgroundMusicEnabled = false;
+      if (!backgroundMusicAudio) {
+        return;
+      }
+      backgroundMusicAudio.pause();
+      backgroundMusicAudio.currentTime = 0;
+    }
+
+    function resumeBackgroundMusic() {
+      backgroundMusicEnabled = true;
+      playBackgroundMusic(true);
+    }
+
+    function saveConversationHistory() {
+      try {
+        window.localStorage.setItem(DIALOGUE_HISTORY_STORAGE_KEY, JSON.stringify(conversationHistory));
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    function saveRelationshipMemory() {
+      try {
+        window.localStorage.setItem(RELATIONSHIP_MEMORY_STORAGE_KEY, JSON.stringify(relationshipMemory));
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    function loadConversationMemory() {
+      try {
+        const rawHistory = window.localStorage.getItem(DIALOGUE_HISTORY_STORAGE_KEY);
+        if (rawHistory) {
+          const parsedHistory = JSON.parse(rawHistory);
+          if (Array.isArray(parsedHistory)) {
+            conversationHistory.splice(0, conversationHistory.length, ...parsedHistory.filter((item) => item && (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string').slice(-MAX_CONVERSATION_TURNS * 2));
+          }
+        }
+      } catch (error) {
+        // ignore
+      }
+
+      try {
+        const rawMemory = window.localStorage.getItem(RELATIONSHIP_MEMORY_STORAGE_KEY);
+        if (rawMemory) {
+          const parsedMemory = JSON.parse(rawMemory);
+          if (parsedMemory && typeof parsedMemory === 'object') {
+            relationshipMemory.likes = Array.isArray(parsedMemory.likes) ? parsedMemory.likes.slice(0, 12) : [];
+            relationshipMemory.worries = Array.isArray(parsedMemory.worries) ? parsedMemory.worries.slice(0, 12) : [];
+            relationshipMemory.relationshipProgress = Array.isArray(parsedMemory.relationshipProgress) ? parsedMemory.relationshipProgress.slice(0, 12) : [];
+            relationshipMemory.recurringPeopleAndThings = Array.isArray(parsedMemory.recurringPeopleAndThings) ? parsedMemory.recurringPeopleAndThings.slice(0, 12) : [];
+          }
+        }
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    function hydrateSayHistoryFromMemory() {
+      if (!sayHistory) {
+        return;
+      }
+      sayHistory.innerHTML = '';
+      for (let i = 0; i < conversationHistory.length; i += 2) {
+        const userTurn = conversationHistory[i];
+        const assistantTurn = conversationHistory[i + 1];
+        if (!userTurn || !assistantTurn || userTurn.role !== 'user' || assistantTurn.role !== 'assistant') {
+          continue;
+        }
+        const entry = document.createElement('div');
+        entry.className = 'say-entry';
+        const userEl = document.createElement('div');
+        userEl.className = 'say-entry-user';
+        userEl.textContent = `你：${userTurn.content}`;
+        const replyEl = document.createElement('div');
+        replyEl.className = 'say-entry-reply';
+        replyEl.textContent = `Moy：${assistantTurn.content}`;
+        entry.appendChild(userEl);
+        entry.appendChild(replyEl);
+        sayHistory.appendChild(entry);
+      }
+      scrollSayHistoryToBottom();
+    }
+
+    function rememberUnique(memoryList, items, maxItems = 12) {
+      items.forEach((item) => {
+        const cleanItem = String(item || '').trim();
+        if (!cleanItem) {
+          return;
+        }
+        if (!memoryList.includes(cleanItem)) {
+          memoryList.push(cleanItem);
+        }
+      });
+      if (memoryList.length > maxItems) {
+        memoryList.splice(0, memoryList.length - maxItems);
+      }
+    }
+
+    function updateRelationshipMemory(userText, replyText) {
+      const source = `${userText || ''}\n${replyText || ''}`;
+      const likes = [];
+      const worries = [];
+      const relationshipProgress = [];
+      const recurringPeopleAndThings = [];
+
+      const likePatterns = [
+        /喜欢([^，。！？\n]{1,12})/g,
+        /想要([^，。！？\n]{1,12})/g,
+        /爱([^，。！？\n]{1,12})/g,
+      ];
+      likePatterns.forEach((pattern) => {
+        let match;
+        while ((match = pattern.exec(source))) {
+          likes.push(match[0]);
+        }
+      });
+
+      const worryPatterns = [
+        /担心([^，。！？\n]{1,18})/g,
+        /烦([^，。！？\n]{1,18})/g,
+        /压力([^，。！？\n]{1,18})/g,
+        /难过([^，。！？\n]{1,18})/g,
+      ];
+      worryPatterns.forEach((pattern) => {
+        let match;
+        while ((match = pattern.exec(source))) {
+          worries.push(match[0]);
+        }
+      });
+
+      if (/(陪你|一直在|记住你|我们一起|我会陪着你|信任我)/.test(replyText || '')) {
+        relationshipProgress.push((replyText || '').slice(0, 36));
+      }
+
+      const namedThings = source.match(/(?:妈妈|爸爸|老师|同学|朋友|领导|同事|室友|猫|狗|考试|工作|学校|项目|恋爱|家里|生活)/g) || [];
+      recurringPeopleAndThings.push(...namedThings);
+
+      rememberUnique(relationshipMemory.likes, likes);
+      rememberUnique(relationshipMemory.worries, worries);
+      rememberUnique(relationshipMemory.relationshipProgress, relationshipProgress, 10);
+      rememberUnique(relationshipMemory.recurringPeopleAndThings, recurringPeopleAndThings);
+      saveRelationshipMemory();
+    }
+
+    function buildRelationshipMemoryPrompt() {
+      const sections = [];
+      if (relationshipMemory.likes.length) {
+        sections.push(`用户喜欢/在意：${relationshipMemory.likes.join('、')}`);
+      }
+      if (relationshipMemory.worries.length) {
+        sections.push(`用户近期烦恼：${relationshipMemory.worries.join('、')}`);
+      }
+      if (relationshipMemory.relationshipProgress.length) {
+        sections.push(`你和用户的关系进展：${relationshipMemory.relationshipProgress.join('；')}`);
+      }
+      if (relationshipMemory.recurringPeopleAndThings.length) {
+        sections.push(`经常提到的人/事：${relationshipMemory.recurringPeopleAndThings.join('、')}`);
+      }
+      return sections.join('\n');
+    }
+
+    function scrollSayHistoryToBottom() {
+      if (!sayHistory) {
+        return;
+      }
+      sayHistory.scrollTop = sayHistory.scrollHeight;
+    }
+
+    function pushConversationTurn(userText, replyText) {
+      const cleanUserText = String(userText || '').trim();
+      const cleanReplyText = String(replyText || '').trim();
+      if (!cleanUserText || !cleanReplyText) {
+        return;
+      }
+
+      conversationHistory.push({ role: 'user', content: cleanUserText });
+      conversationHistory.push({ role: 'assistant', content: cleanReplyText.replace(/^Moy[:：]\s*/i, '').trim() });
+      if (conversationHistory.length > MAX_CONVERSATION_TURNS * 2) {
+        conversationHistory.splice(0, conversationHistory.length - MAX_CONVERSATION_TURNS * 2);
+      }
+
+      const entry = document.createElement('div');
+      entry.className = 'say-entry';
+      const userEl = document.createElement('div');
+      userEl.className = 'say-entry-user';
+      userEl.textContent = `你：${cleanUserText}`;
+      const replyEl = document.createElement('div');
+      replyEl.className = 'say-entry-reply';
+      replyEl.textContent = cleanReplyText;
+      entry.appendChild(userEl);
+      entry.appendChild(replyEl);
+      sayHistory.appendChild(entry);
+      scrollSayHistoryToBottom();
+      updateRelationshipMemory(cleanUserText, cleanReplyText);
+      saveConversationHistory();
+    }
+
+    function setGestureCursorVisible(visible, pinch = false) {
+      gestureCursor.classList.toggle('active', visible);
+      gestureCursor.classList.toggle('pinching', visible && pinch);
+      if (!visible) {
+        gestureHand.classList.remove('active');
+      }
+    }
+
+    async function getOrCreateMediaPipeStream() {
+      if (mediaPipeStream && mediaPipeStream.active) {
+        return mediaPipeStream;
+      }
+      if (mediaPipeStreamPromise) {
+        return mediaPipeStreamPromise;
+      }
+
+      const baseVideo = { width: 640, height: 480 };
+      const videoConstraints = preferredCameraId
+        ? { ...baseVideo, deviceId: { exact: preferredCameraId } }
+        : { ...baseVideo, facingMode: 'user' };
+
+      mediaPipeStreamPromise = navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false })
+        .then((stream) => {
+          mediaPipeStream = stream;
+          const track = stream.getVideoTracks()[0];
+          const settings = track?.getSettings?.() || {};
+          if (settings.deviceId) {
+            preferredCameraId = settings.deviceId;
+            window.localStorage.setItem('moyPreferredCameraId', settings.deviceId);
+          }
+          mediaPipeStreamPromise = null;
+          return stream;
+        })
+        .catch(async (error) => {
+          mediaPipeStreamPromise = null;
+          if (preferredCameraId) {
+            preferredCameraId = '';
+            window.localStorage.removeItem('moyPreferredCameraId');
+            return getOrCreateMediaPipeStream();
+          }
+          throw error;
+        });
+
+      return mediaPipeStreamPromise;
+    }
+
+    function stopMediaPipeMode() {
+      const wasPetMode = mediaPipeMode === 'pet';
+      mediaPipeMode = null;
+      draggingFoodEl = null;
+      pinchActive = false;
+      setGestureCursorVisible(false, false);
+      gestureHand.classList.remove('active');
+      cameraFeed.classList.remove('active');
+      if (mediaPipeCamera && typeof mediaPipeCamera.stop === 'function') {
+        mediaPipeCamera.stop();
+      }
+      mediaPipeCamera = null;
+      cameraFeed.pause();
+      cameraFeed.srcObject = null;
+      if (wasPetMode) {
+        endPettingMouthMode();
+      }
+      stopFeedingDragMode();
+    }
+
+    async function ensureMediaPipeReady() {
+      if (handsTracker) {
+        return true;
+      }
+      if (!window.Hands || !window.Camera) {
+        updateDebugStatus('MediaPipe 资源加载失败');
+        return false;
+      }
+      handsTracker = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
+      handsTracker.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.52,
+        minTrackingConfidence: 0.45,
+      });
+      handsTracker.onResults(handleMediaPipeResults);
+      return true;
+    }
+
+    async function startMediaPipeMode(mode) {
+      if (mediaPipeMode === mode) {
+        stopMediaPipeMode();
+        updateDebugStatus(mode === 'feed' ? '投喂手势关闭' : '抚摸手势关闭');
+        return;
+      }
+
+      stopMediaPipeMode();
+      const ready = await ensureMediaPipeReady();
+      if (!ready) {
+        return;
+      }
+
+      try {
+        const stream = await getOrCreateMediaPipeStream();
+        cameraFeed.srcObject = stream;
+        cameraFeed.classList.add('active');
+        await cameraFeed.play();
+        mediaPipeMode = mode;
+        mediaPipeCamera = new Camera(cameraFeed, {
+          onFrame: async () => {
+            if (handsTracker && mediaPipeMode && cameraFeed.readyState >= 2) {
+              await handsTracker.send({ image: cameraFeed });
+            }
+          },
+          width: 640,
+          height: 480,
+        });
+        mediaPipeCamera.start();
+        updateDebugStatus(mode === 'feed' ? '投喂手势开启' : '抚摸手势开启');
+      } catch (error) {
+        stopMediaPipeMode();
+        updateDebugStatus('摄像头无法开启');
+      }
+    }
+
+    function getFoodAtPoint(x, y) {
+      const items = Array.from(foodCloud.querySelectorAll('.food-item.show'));
+      return items.find((item) => {
+        const rect = item.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      }) || null;
+    }
+
+    function feedPetWithFood(foodEl) {
+      if (!foodEl) {
+        return;
+      }
+      foodEl.classList.remove('show');
+      foodEl.style.opacity = '0';
+      foodEl.style.transform = 'translate(-50%, -50%) scale(0.35)';
+      window.setTimeout(() => {
+        foodEl.remove();
+        if (!foodCloud.querySelector('.food-item')) {
+          foodShown = false;
+        }
+      }, 220);
+      finishFeeding(foodEl);
+      updateDebugStatus('Moy 吃掉了食物');
+    }
+
+    function getHandAsset(handedness, x, y) {
+      if (!waikeHitRect) {
+        return handedness === 'Left' ? './hand/2.png' : './hand/1.PNG';
+      }
+      const inPet = x >= waikeHitRect.left && x <= waikeHitRect.left + waikeHitRect.width && y >= waikeHitRect.top && y <= waikeHitRect.top + waikeHitRect.height;
+      if (!inPet) {
+        return '';
+      }
+      const ratio = (x - waikeHitRect.left) / waikeHitRect.width;
+      if (y <= waikeHitRect.top + waikeHitRect.height * 0.36) {
+        return handedness === 'Left' ? './hand/2.png' : './hand/1.PNG';
+      }
+      if (ratio < 0.5) {
+        return './hand/4.png';
+      }
+      return './hand/3.PNG';
+    }
+
+    function handlePettingGesture(x, y, pinch, handedness) {
+      const asset = getHandAsset(handedness, x, y);
+      if (!asset) {
+        gestureHand.classList.remove('active');
+        pinchActive = false;
+        if (pettingMouthMode) {
+          endPettingMouthMode();
+        }
+        return;
+      }
+      gestureHand.src = asset;
+      gestureHand.style.left = `${x}px`;
+      gestureHand.style.top = `${y}px`;
+      gestureHand.classList.add('active');
+      if (pinch && !pinchActive) {
+        pinchActive = true;
+        startPettingMouthMode();
+        playEyeManual('./jb/eye/zy.GIF', 680);
+      } else if (!pinch && pinchActive) {
+        pinchActive = false;
+        if (pettingMouthMode) {
+          endPettingMouthMode();
+        }
+      }
+    }
+
+    function handleFeedingGesture(x, y, pinch) {
+      if (!foodShown) {
+        stopFeedingDragMode();
+        pinchActive = false;
+        return;
+      }
+      if (pinch && !draggingFoodEl && !pinchActive) {
+        draggingFoodEl = getFoodAtPoint(x, y);
+        pinchActive = true;
+        if (draggingFoodEl) {
+          draggingFoodEl.style.zIndex = '40';
+          startFeedingDragMode();
+        }
+      }
+      if (!pinch && pinchActive) {
+        pinchActive = false;
+      }
+      if (draggingFoodEl) {
+        draggingFoodEl.style.left = `${x}px`;
+        draggingFoodEl.style.top = `${y}px`;
+        updateFeedingEyeTracking(x, y);
+        if (!pinch) {
+          const overPet = waikeHitRect && x >= waikeHitRect.left && x <= waikeHitRect.left + waikeHitRect.width && y >= waikeHitRect.top && y <= waikeHitRect.top + waikeHitRect.height;
+          const releasedFood = draggingFoodEl;
+          draggingFoodEl = null;
+          if (overPet) {
+            feedPetWithFood(releasedFood);
+          } else {
+            stopFeedingDragMode();
+            releasedFood.style.zIndex = '';
+            releasedFood.style.left = `${releasedFood.dataset.homeLeft}px`;
+            releasedFood.style.top = `${releasedFood.dataset.homeTop}px`;
+          }
+        }
+      } else {
+        stopFeedingDragMode();
+      }
+    }
+
+    function handleMediaPipeResults(results) {
+      if (!mediaPipeMode) {
+        return;
+      }
+      const landmarks = results.multiHandLandmarks?.[0];
+      const handedness = results.multiHandedness?.[0]?.label || 'Right';
+      if (!landmarks) {
+        pinchActive = false;
+        setGestureCursorVisible(false, false);
+        gestureHand.classList.remove('active');
+        if (mediaPipeMode === 'pet' && pettingMouthMode) {
+          endPettingMouthMode();
+        }
+        if (mediaPipeMode === 'feed') {
+          stopFeedingDragMode();
+        }
+        return;
+      }
+      const indexTip = landmarks[8];
+      const thumbTip = landmarks[4];
+      const targetX = (1 - indexTip.x) * window.innerWidth;
+      const targetY = indexTip.y * window.innerHeight;
+      smoothedGesture.x += (targetX - smoothedGesture.x) * 0.42;
+      smoothedGesture.y += (targetY - smoothedGesture.y) * 0.42;
+      const x = smoothedGesture.x;
+      const y = smoothedGesture.y;
+      const pinchDistance = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
+      const pinch = pinchDistance < 0.062;
+      trackedGesture = { x, y, pinch, handedness };
+      gestureCursor.style.left = `${x}px`;
+      gestureCursor.style.top = `${y}px`;
+      setGestureCursorVisible(true, pinch);
+      if (mediaPipeMode === 'feed') {
+        handleFeedingGesture(x, y, pinch);
+      } else if (mediaPipeMode === 'pet') {
+        handlePettingGesture(x, y, pinch, handedness);
+      }
+    }
+
+    function showFoodAroundWaike() {
+      foodCloud.innerHTML = '';
+      const zones = [
+        { xMin: 0.15, xMax: 0.35, yMin: 0.08, yMax: 0.78 },
+        { xMin: 0.65, xMax: 0.85, yMin: 0.08, yMax: 0.78 },
+        { xMin: 0.38, xMax: 0.62, yMin: 0.05, yMax: 0.23 },
+        { xMin: 0.38, xMax: 0.62, yMin: 0.87, yMax: 0.96 },
+      ];
+      const slots = [
+        { zone: 0, x: 0.22, y: 0.18 },
+        { zone: 0, x: 0.29, y: 0.36 },
+        { zone: 0, x: 0.24, y: 0.58 },
+        { zone: 1, x: 0.72, y: 0.18 },
+        { zone: 1, x: 0.79, y: 0.36 },
+        { zone: 1, x: 0.74, y: 0.58 },
+        { zone: 2, x: 0.44, y: 0.13 },
+        { zone: 3, x: 0.56, y: 0.9 },
+      ];
+
+      slots.forEach((slot, index) => {
+        const zone = zones[slot.zone];
+        const x = Math.min(zone.xMax, Math.max(zone.xMin, slot.x)) * window.innerWidth;
+        const y = Math.min(zone.yMax, Math.max(zone.yMin, slot.y)) * window.innerHeight;
+        const img = document.createElement('img');
+        img.className = 'food-item';
+        img.src = `./food/${index + 1}.PNG`;
+        img.alt = `food ${index + 1}`;
+        img.dataset.homeLeft = `${x}`;
+        img.dataset.homeTop = `${y}`;
+        img.style.left = `${x}px`;
+        img.style.top = `${y}px`;
+        foodCloud.appendChild(img);
+        requestAnimationFrame(() => img.classList.add('show'));
+      });
+
+      foodShown = true;
+      updateDebugStatus('食物出现');
+    }
+
+    const DEEPSEEK_API_KEY = 'sk-a39fa5272fe441f093617ff0fcb2d4f5';
+    const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+    const DEEPSEEK_MODEL = 'deepseek-reasoner';
+    const MOY_TTS_PROXY_URL = 'http://localhost:3000/tts';
+    const ALIYUN_ISI_APPKEY = 'YcJc89nAagUOFqEu';
+    const ALIYUN_ISI_TOKEN = 'cc23b69d051d44f19a5626da8a04e4e4';
+    const ALIYUN_ISI_WS_URL = `wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1?token=${ALIYUN_ISI_TOKEN}`;
+    const ALIYUN_AUDIO_SAMPLE_RATE = 16000;
+    const ALIYUN_AUDIO_CHUNK_MS = 100;
+
+    async function requestMoyReply(message) {
+      const recentHistory = conversationHistory.slice(-MAX_CONVERSATION_TURNS * 2);
+      const memoryPrompt = buildRelationshipMemoryPrompt();
+      const response = await fetch(DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: DEEPSEEK_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: '你是 Moy，是用户最好的朋友。你会认真倾听用户的日常分享，语气温柔、亲近、真诚，有陪伴感。你要结合这段对话前文去理解用户现在的话，记住已经聊过的内容、情绪、关系、正在讨论的问题，并延续上下文自然回应。回答不要空泛，要有细节、有贴近感，像真正熟悉用户的朋友。用户开心时和他一起开心，用户难过时先接住情绪再安慰，用户纠结时帮助梳理。回复使用简体中文，自然、真诚、细腻、略有变化，不要机械重复。只输出最终想对用户说的话，不要输出思考过程，不要使用标题或项目符号，除非用户明确要求。',
+            },
+            ...(memoryPrompt ? [{ role: 'system', content: `以下是你对用户的长期记忆，请自然参考，不要生硬复述：\n${memoryPrompt}` }] : []),
+            ...recentHistory,
+            {
+              role: 'user',
+              content: message,
+            },
+          ],
+          temperature: 0.98,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data?.choices?.[0]?.message?.content?.trim() || 'Moy：我刚刚有点走神了，你可以再和我说一次吗？';
+    }
+
+    function sanitizeMoyReply(text) {
+      let cleaned = String(text || '').trim();
+      if (!cleaned) {
+        return '';
+      }
+
+      cleaned = cleaned
+        .replace(/<think>[\s\S]*?<\/think>/gi, ' ')
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/^[\s\n]*(思考过程|思路|推理过程|分析|内心独白|thoughts?|reasoning)[:：\-\s]*/i, '')
+        .replace(/^[\s\n]*(最终回复|最终答案|回答|答复|reply|response)[:：\-\s]*/i, '')
+        .replace(/^[\s\n]*(好的|好呀|当然|可以呀|没问题|嗯|嗯嗯)[，,！!。\s]*/i, '')
+        .replace(/^[\s\n]*(Moy|moy|AI|助手|assistant)[:：\-\s]*/i, '')
+        .replace(/^[\s\n]*[【\[]?(思考|分析|推理|答案|回复)[】\]][:：\-\s]*/gi, '')
+        .replace(/[\t ]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+      const finalLabelMatch = cleaned.match(/(?:最终回复|最终答案|回答|答复|reply|response)[:：]\s*([\s\S]+)/i);
+      if (finalLabelMatch?.[1]) {
+        cleaned = finalLabelMatch[1].trim();
+      }
+
+      const thinkBlockIndex = cleaned.search(/(?:思考过程|推理过程|分析|thoughts?|reasoning)[:：]/i);
+      if (thinkBlockIndex === 0) {
+        const splitMatch = cleaned.match(/(?:最终回复|最终答案|回答|答复|reply|response)[:：]\s*([\s\S]+)/i);
+        if (splitMatch?.[1]) {
+          cleaned = splitMatch[1].trim();
+        }
+      }
+
+      return cleaned.replace(/^Moy[:：]\s*/i, '').trim();
+    }
+
+    function sanitizeMoySpeechText(text) {
+      return String(text || '')
+        .replace(/^Moy[:：]\s*/i, '')
+        .replace(/❤️+/gu, '， ') 
+        .replace(/✨+/gu, '， ') 
+        .replace(/[\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
+        .replace(/([，。！？；：,.!?;:])\s*[，。！？；：,.!?;:]+/g, '$1')
+        .replace(/\s*([，。！？；：,.!?;:])\s*/g, '$1 ')
+        .replace(/[\t ]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    function buildLocalReply(message) {
+      const text = message.trim();
+      if (!text) {
+        return 'Moy：我听到你轻轻地来找我了。如果你愿意，再跟我说一点，我会一直在。';
+      }
+
+      if (/(生气|烦|火大|气死|讨厌|崩溃|委屈)/.test(text)) {
+        return 'Moy：听到这里我也有点替你生气，明明你已经很努力了。先把最刺痛你的那件事拎出来，我们一起想想，是先回避一下情绪，还是一步步把它解决掉。';
+      }
+
+      if (/(难过|伤心|想哭|低落|孤单|失落|忧伤)/.test(text)) {
+        return 'Moy：我也跟着心里酸酸的。你不用急着马上振作，先让我陪你把这阵难过待过去。要不要先从今天最让你难受的那个瞬间开始说？';
+      }
+
+      if (/(累|疲惫|困|没力气|忙|压力|撑不住)/.test(text)) {
+        return 'Moy：你最近一定扛了很多吧，听着就让人心疼。我们可以先不想着把所有事都做好，只挑一件最重要的先处理，其他的让我陪你慢慢排。';
+      }
+
+      if (/(开心|高兴|顺利|喜欢|惊喜|幸福)/.test(text)) {
+        return 'Moy：太好了，我听着都被你感染到了。你愿意把这个让你开心的小细节多讲一点吗？我想把你的快乐也认真记住。';
+      }
+
+      return 'Moy：我在认真听你说。你可以继续把事情讲完整一点，比如发生了什么、你最在意的是什么，我会陪你一起想办法。';
+    }
+
+    async function ensureSharedMicStream() {
+      if (sharedMicStream && sharedMicStream.active) {
+        return sharedMicStream;
+      }
+      if (sharedMicReadyPromise) {
+        return sharedMicReadyPromise;
+      }
+      sharedMicReadyPromise = navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          noiseSuppression: true,
+          echoCancellation: true,
+        },
+        video: false,
+      }).then((stream) => {
+        sharedMicStream = stream;
+        stream.getAudioTracks().forEach((track) => {
+          track.onended = () => {
+            if (sharedMicStream === stream) {
+              sharedMicStream = null;
+            }
+          };
+        });
+        return stream;
+      }).finally(() => {
+        sharedMicReadyPromise = null;
+      });
+      return sharedMicReadyPromise;
+    }
+
+    function scrollSayReplyToBottom() {
+      requestAnimationFrame(() => {
+        sayReply.scrollTop = sayReply.scrollHeight;
+      });
+    }
+
+    function detectConversationEmotion(text) {
+      const source = String(text || '').trim();
+      if (!source) {
+        return '';
+      }
+
+      if (/(无语|服了|懒得说|呵呵|算了|不想说|尴尬|离谱|沉默|不知道说什么)/.test(source)) {
+        return 'unamused';
+      }
+      if (/(生气|火大|气死|烦死|讨厌|愤怒|恼火|气炸|受不了)/.test(source)) {
+        return 'angry';
+      }
+      if (/(难过|伤心|想哭|委屈|低落|失落|忧伤|心酸|崩溃)/.test(source)) {
+        return 'sad';
+      }
+      if (/(开心|高兴|快乐|惊喜|幸福|兴奋|顺利|喜欢|太好了|哈哈|耶)/.test(source)) {
+        return 'happy';
+      }
+
+      return '';
+    }
+
+    function getEmotionEyeAssets(emotion) {
+      if (emotion === 'happy') {
+        return { enterGif: './jb/eye/1b2.GIF', holdPng: './jb/eye/2.PNG', exitGif: './jb/eye/2b1.GIF' };
+      }
+      if (emotion === 'sad') {
+        return { enterGif: './jb/eye/1b3.GIF', holdPng: './jb/eye/3.PNG', exitGif: './jb/eye/3b1.GIF' };
+      }
+      if (emotion === 'angry') {
+        return { enterGif: './jb/eye/1b4.GIF', holdPng: './jb/eye/4.PNG', exitGif: './jb/eye/4b1.GIF' };
+      }
+      if (emotion === 'unamused') {
+        return { enterGif: './jb/eye/1b5.GIF', holdPng: './jb/eye/5.PNG', exitGif: './jb/eye/5b1.GIF' };
+      }
+      return null;
+    }
+
+    function clearEmotionEyeTimers() {
+      window.clearTimeout(emotionEyeTimer);
+      emotionEyeTimer = null;
+    }
+
+    function clearFeedingDragTimer() {
+      window.clearTimeout(feedingDragTimer);
+      feedingDragTimer = null;
+    }
+
+    function setEyeTrackingOffset(dx = 0, dy = 0) {
+      petEye.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+
+    function resetEyeTrackingOffset() {
+      petEye.style.transform = '';
+    }
+
+    function resetFeedingMoodState() {
+      window.clearTimeout(feedingMoodResetTimer);
+      feedingMoodResetTimer = null;
+      feedCount = 0;
+      eyeManualPlaying = false;
+      mouthManualPlaying = false;
+      resetEyeTrackingOffset();
+      petEye.src = './jb/eye/1.PNG';
+      petMouth.src = './jb/mouse/1.PNG';
+    }
+
+    function startFeedingDragMode() {
+      if (feedingDragMode || feedingDragTimer || talkingMouthLoop || focusFaceMode || focusFaceEnding || pettingMouthMode || pettingMouthEnding) {
+        return;
+      }
+
+      feedingDragMode = true;
+      mouthManualPlaying = true;
+      petMouth.src = `./jb/mouse/1b5.GIF?t=${Date.now()}`;
+      feedingDragTimer = window.setTimeout(() => {
+        if (!feedingDragMode) {
+          return;
+        }
+        petMouth.src = './jb/mouse/5.PNG';
+        mouthManualPlaying = false;
+        feedingDragTimer = null;
+      }, 1200);
+    }
+
+    function stopFeedingDragMode() {
+      const wasDragging = feedingDragMode || feedingDragTimer;
+      feedingDragMode = false;
+      clearFeedingDragTimer();
+      if (wasDragging && !talkingMouthLoop && !pettingMouthMode && !pettingMouthEnding) {
+        mouthManualPlaying = false;
+        petMouth.src = './jb/mouse/1.PNG';
+      }
+      resetEyeTrackingOffset();
+      if (!feedingMoodResetTimer && !emotionEyeEnding) {
+        eyeManualPlaying = false;
+        petEye.src = './jb/eye/1.PNG';
+      }
+    }
+
+    function updateFeedingEyeTracking(x, y) {
+      if (!waikeHitRect || !feedingDragMode || idleMode || idleAwakening || irritationMode || irritationTransitioning) {
+        resetEyeTrackingOffset();
+        return;
+      }
+
+      const relativeX = (x - waikeHitRect.left) / waikeHitRect.width;
+      const relativeY = (y - waikeHitRect.top) / waikeHitRect.height;
+      const normalizedX = Math.max(-1, Math.min(1, (relativeX - 0.5) * 2));
+      const normalizedY = Math.max(-1, Math.min(1, (relativeY - 0.45) * 2));
+      const offsetX = normalizedX * 2.1;
+      const offsetY = normalizedY * 1.4;
+      setEyeTrackingOffset(offsetX, offsetY);
+      eyeManualPlaying = true;
+    }
+
+    function playFeedingMoodStage() {
+      window.clearTimeout(feedingMoodResetTimer);
+      feedCount += 1;
+      eyeManualPlaying = true;
+      mouthManualPlaying = true;
+
+      if (feedCount <= 3) {
+        triggerPetMoodBurst(1);
+        petEye.src = `./jb/eye/1b2.GIF?t=${Date.now()}`;
+        petMouth.src = `./jb/mouse/1b4.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/2.PNG';
+          petMouth.src = './jb/mouse/4.PNG';
+          eyeManualPlaying = false;
+          mouthManualPlaying = false;
+        }, 1200);
+      } else if (feedCount <= 6) {
+        triggerPetMoodBurst(3);
+        petEye.src = `./jb/eye/1b3.GIF?t=${Date.now()}`;
+        petMouth.src = `./jb/mouse/1b2.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/3.PNG';
+          petMouth.src = './jb/mouse/2.PNG';
+          eyeManualPlaying = false;
+          mouthManualPlaying = false;
+        }, 1200);
+      } else if (feedCount <= 8) {
+        triggerPetMoodBurst(2);
+        petEye.src = `./jb/eye/1b6.GIF?t=${Date.now()}`;
+        petMouth.src = `./jb/mouse/1b3.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/6.PNG';
+          petMouth.src = './jb/mouse/3.PNG';
+          eyeManualPlaying = false;
+          mouthManualPlaying = false;
+        }, 1200);
+      } else if (feedCount <= 11) {
+        triggerPetMoodBurst(2);
+        petEye.src = `./jb/eye/1b4.GIF?t=${Date.now()}`;
+        petMouth.src = `./jb/mouse/1b5.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/4.PNG';
+          petMouth.src = './jb/mouse/5.PNG';
+          eyeManualPlaying = false;
+          mouthManualPlaying = false;
+        }, 1200);
+      } else {
+        triggerPetMoodBurst(3);
+        petEye.src = `./jb/eye/1b9.GIF?t=${Date.now()}`;
+        petMouth.src = `./jb/mouse/1b8.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/8.PNG';
+          petMouth.src = './jb/mouse/8.PNG';
+          eyeManualPlaying = false;
+          mouthManualPlaying = false;
+        }, 1200);
+      }
+
+      feedingMoodResetTimer = window.setTimeout(() => {
+        feedingMoodResetTimer = null;
+        eyeManualPlaying = false;
+        mouthManualPlaying = false;
+        petEye.src = './jb/eye/1.PNG';
+        petMouth.src = './jb/mouse/1.PNG';
+      }, 5000);
+    }
+
+    function playChewSequence(loopCount = 3) {
+      let remaining = loopCount;
+      mouthManualPlaying = true;
+
+      function chewOnce() {
+        if (remaining <= 0) {
+          mouthManualPlaying = false;
+          playFeedingMoodStage();
+          return;
+        }
+        remaining -= 1;
+        petMouth.src = `./jb/mouse/1b2.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petMouth.src = `./jb/mouse/2b1.GIF?t=${Date.now()}`;
+          window.setTimeout(chewOnce, 1200);
+        }, 1200);
+      }
+
+      chewOnce();
+    }
+
+    function finishFeeding(foodEl) {
+      if (!foodEl) {
+        return;
+      }
+      stopFeedingDragMode();
+      petMouth.src = `./jb/mouse/5b1.GIF?t=${Date.now()}`;
+      mouthManualPlaying = true;
+      window.setTimeout(() => {
+        petMouth.src = './jb/mouse/1.PNG';
+        mouthManualPlaying = false;
+        playChewSequence();
+      }, 1200);
+    }
+
+    function clearPettingMouthTimer() {
+      window.clearTimeout(pettingMouthTimer);
+      pettingMouthTimer = null;
+    }
+
+    function startPettingMouthMode() {
+      if (pettingMouthMode || pettingMouthEnding || talkingMouthLoop || focusFaceMode || focusFaceEnding) {
+        return;
+      }
+
+      triggerPetMoodBurst(1);
+      clearPettingMouthTimer();
+      pettingMouthMode = true;
+      mouthManualPlaying = true;
+      petMouth.src = `./jb/mouse/1b4.GIF?t=${Date.now()}`;
+      pettingMouthTimer = window.setTimeout(() => {
+        if (!pettingMouthMode) {
+          return;
+        }
+        petMouth.src = './jb/mouse/4.PNG';
+        mouthManualPlaying = false;
+        pettingMouthTimer = null;
+      }, 1200);
+    }
+
+    function endPettingMouthMode() {
+      if ((!pettingMouthMode && !pettingMouthEnding) || talkingMouthLoop || focusFaceMode || focusFaceEnding) {
+        pettingMouthMode = false;
+        return;
+      }
+
+      clearPettingMouthTimer();
+      pettingMouthMode = false;
+      pettingMouthEnding = true;
+      mouthManualPlaying = true;
+      petMouth.src = `./jb/mouse/4b1.GIF?t=${Date.now()}`;
+      pettingMouthTimer = window.setTimeout(() => {
+        petMouth.src = './jb/mouse/1.PNG';
+        mouthManualPlaying = false;
+        pettingMouthEnding = false;
+        pettingMouthTimer = null;
+      }, 1200);
+    }
+
+    function startEmotionEyeMode(emotion) {
+      const assets = getEmotionEyeAssets(emotion);
+      if (!assets || emotionEyeEnding || irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        return;
+      }
+
+      clearEmotionEyeTimers();
+      conversationEmotion = emotion;
+      eyeManualPlaying = true;
+      petEye.src = `${assets.enterGif}?t=${Date.now()}`;
+      emotionEyeTimer = window.setTimeout(() => {
+        if (conversationEmotion !== emotion || emotionEyeEnding) {
+          return;
+        }
+        petEye.src = assets.holdPng;
+        eyeManualPlaying = false;
+        emotionEyeTimer = null;
+      }, 1500);
+    }
+
+    function endEmotionEyeMode() {
+      const assets = getEmotionEyeAssets(conversationEmotion);
+      if (!assets || emotionEyeEnding || irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        conversationEmotion = '';
+        return;
+      }
+
+      clearEmotionEyeTimers();
+      emotionEyeEnding = true;
+      eyeManualPlaying = true;
+      petEye.src = `${assets.exitGif}?t=${Date.now()}`;
+      emotionEyeTimer = window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        eyeManualPlaying = false;
+        emotionEyeEnding = false;
+        conversationEmotion = '';
+        emotionEyeTimer = null;
+      }, 1500);
+    }
+
+    function stopTalkingMouthLoop() {
+      talkingMouthLoop = false;
+      window.clearTimeout(talkingMouthTimer);
+      talkingMouthTimer = null;
+      if (emotionEyeEnding) {
+        return;
+      }
+      if (pettingMouthMode) {
+        mouthManualPlaying = false;
+        petMouth.src = './jb/mouse/4.PNG';
+        return;
+      }
+      if (!focusFaceMode && !focusFaceEnding) {
+        mouthManualPlaying = false;
+        setMouthState('./jb/mouse/1.PNG');
+      }
+    }
+
+    function startTalkingMouthLoop() {
+      talkingMouthLoop = true;
+      mouthManualPlaying = true;
+
+      const playLoop = () => {
+        if (!talkingMouthLoop) {
+          return;
+        }
+        petMouth.src = `./jb/mouse/talk.GIF?t=${Date.now()}`;
+        talkingMouthTimer = window.setTimeout(playLoop, 1500);
+      };
+
+      playLoop();
+    }
+
+    function stopMoySpeech() {
+      stopTalkingMouthLoop();
+      if (moySpeechAudio) {
+        moySpeechAudio.pause();
+        moySpeechAudio.src = '';
+        moySpeechAudio = null;
+      }
+      if (moySpeechObjectUrl) {
+        URL.revokeObjectURL(moySpeechObjectUrl);
+        moySpeechObjectUrl = '';
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      resumeBackgroundMusic();
+    }
+
+    async function speakMoyReply(text) {
+      const cleanText = sanitizeMoySpeechText(text);
+      if (!cleanText) {
+        return;
+      }
+
+      stopMoySpeech();
+      pauseBackgroundMusic();
+
+      try {
+        const response = await fetch(MOY_TTS_PROXY_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: cleanText }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        if (!audioBlob.size) {
+          throw new Error('empty audio');
+        }
+
+        moySpeechObjectUrl = URL.createObjectURL(audioBlob);
+        moySpeechAudio = new Audio(moySpeechObjectUrl);
+        moySpeechAudio.preload = 'auto';
+        startTalkingMouthLoop();
+        moySpeechAudio.onended = () => {
+          stopTalkingMouthLoop();
+          endEmotionEyeMode();
+          resumeBackgroundMusic();
+          if (moySpeechObjectUrl) {
+            URL.revokeObjectURL(moySpeechObjectUrl);
+            moySpeechObjectUrl = '';
+          }
+          moySpeechAudio = null;
+        };
+        await moySpeechAudio.play();
+        return;
+      } catch (error) {
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+          return;
+        }
+      }
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'zh-CN';
+      utterance.rate = 1;
+      utterance.pitch = 1.05;
+      utterance.volume = 1;
+      utterance.onend = () => {
+        stopTalkingMouthLoop();
+        endEmotionEyeMode();
+        resumeBackgroundMusic();
+      };
+      utterance.onerror = () => {
+        stopTalkingMouthLoop();
+        endEmotionEyeMode();
+        resumeBackgroundMusic();
+      };
+      startTalkingMouthLoop();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function setSayState(status, userText, replyText, shouldSpeak = false) {
+      sayStatus.textContent = status;
+      if (typeof userText === 'string') {
+        sayUser.textContent = `你：${userText}`;
+        sayUser.scrollTop = sayUser.scrollHeight;
+      }
+      if (typeof replyText === 'string') {
+        sayReply.textContent = replyText;
+        sayReply.scrollTop = sayReply.scrollHeight;
+        if (shouldSpeak) {
+          speakMoyReply(replyText);
+        }
+      }
+    }
+
+    function createHexId() {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const buffer = new ArrayBuffer(float32Array.length * 2);
+      const view = new DataView(buffer);
+      for (let i = 0; i < float32Array.length; i += 1) {
+        const sample = Math.max(-1, Math.min(1, float32Array[i]));
+        view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+      return buffer;
+    }
+
+    function downsampleBuffer(sourceBuffer, sourceSampleRate, targetSampleRate) {
+      if (targetSampleRate >= sourceSampleRate) {
+        return sourceBuffer;
+      }
+      const sampleRateRatio = sourceSampleRate / targetSampleRate;
+      const newLength = Math.round(sourceBuffer.length / sampleRateRatio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+        let accum = 0;
+        let count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < sourceBuffer.length; i += 1) {
+          accum += sourceBuffer[i];
+          count += 1;
+        }
+        result[offsetResult] = count > 0 ? accum / count : 0;
+        offsetResult += 1;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function extractTranscriptText(payload) {
+      return payload?.result || payload?.text || payload?.stash_result?.text || '';
+    }
+
+    async function finishSpeechInput() {
+      pauseBackgroundMusic();
+      sayBtn.classList.remove('is-listening');
+      isPressTalking = false;
+      const spoken = speechBuffer.trim();
+      speechBuffer = '';
+
+      if (!spoken) {
+        endFocusFaceMode();
+        endEmotionEyeMode();
+        setSayState('没有听清，松开后可以再按一次试试。', '我刚刚没有顺利说出来。', 'Moy：没关系，我们可以再试一次，我会继续听。');
+        return;
+      }
+
+      conversationEmotion = detectConversationEmotion(spoken);
+      if (conversationEmotion) {
+        startEmotionEyeMode(conversationEmotion);
+      }
+      setSayState('Moy 正在想怎么回答你……', spoken, 'Moy：让我想一想，要怎么更认真地陪你。');
+      try {
+        const reply = await requestMoyReply(spoken);
+        const cleanedReply = sanitizeMoyReply(reply);
+        const finalReply = `Moy：${(cleanedReply || buildLocalReply(spoken)).replace(/^Moy[:：]\s*/, '')}`;
+        endFocusFaceMode();
+        setSayState('对话完成，按住 say 可以继续说。', spoken, finalReply, true);
+        pushConversationTurn(spoken, finalReply);
+      } catch (error) {
+        const fallbackReply = buildLocalReply(spoken);
+        endFocusFaceMode();
+        setSayState('豆包暂时没有回应，先由 Moy 接住你。', spoken, fallbackReply, true);
+        pushConversationTurn(spoken, fallbackReply);
+      }
+    }
+
+    function startSpeechInput() {
+      if (isPressTalking) {
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
+        isPressTalking = false;
+        sayBtn.classList.remove('is-listening');
+        setSayState('当前环境不支持阿里云实时语音识别。', '请改用新版 Chrome / Edge，并允许麦克风权限。', 'Moy：我已经准备好听你说话了，只是这个浏览器现在还不够配合。');
+        return;
+      }
+
+      isPressTalking = true;
+      speechBuffer = '';
+      startFocusFaceMode();
+      sayBtn.classList.add('is-listening');
+      setSayState('Moy 正在连线阿里云听你说话……', '正在准备麦克风……', 'Moy：嗯，我在听，你慢慢说。');
+
+      const taskId = createHexId();
+      const ws = new WebSocket(ALIYUN_ISI_WS_URL);
+      ws.binaryType = 'arraybuffer';
+
+      const session = {
+        ws,
+        taskId,
+        started: false,
+        completed: false,
+        closed: false,
+        mediaStream: null,
+        audioContext: null,
+        processor: null,
+        sourceNode: null,
+      };
+      aliyunSpeechSession = session;
+
+      const cleanup = async () => {
+        if (session.processor) {
+          session.processor.disconnect();
+        }
+        if (session.sourceNode) {
+          session.sourceNode.disconnect();
+        }
+        if (session.audioContext) {
+          try {
+            await session.audioContext.close();
+          } catch (error) {
+            // ignore
+          }
+        }
+        if (session.mediaStream && session.mediaStream !== sharedMicStream) {
+          session.mediaStream.getTracks().forEach((track) => track.stop());
+        }
+      };
+
+      const failSession = async (statusText, userText, replyText) => {
+        if (aliyunSpeechSession === session) {
+          aliyunSpeechSession = null;
+        }
+        isPressTalking = false;
+        sayBtn.classList.remove('is-listening');
+        session.closed = true;
+        try {
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+          }
+        } catch (error) {
+          // ignore
+        }
+        await cleanup();
+        endFocusFaceMode();
+        endEmotionEyeMode();
+        setSayState(statusText, userText, replyText);
+      };
+
+      ws.onopen = async () => {
+        if (session.closed) {
+          return;
+        }
+
+        ws.send(JSON.stringify({
+          header: {
+            message_id: createHexId(),
+            task_id: taskId,
+            namespace: 'SpeechTranscriber',
+            name: 'StartTranscription',
+            appkey: ALIYUN_ISI_APPKEY,
+          },
+          payload: {
+            format: 'PCM',
+            sample_rate: ALIYUN_AUDIO_SAMPLE_RATE,
+            enable_intermediate_result: true,
+            enable_punctuation_prediction: true,
+            enable_inverse_text_normalization: true,
+          },
+        }));
+
+        try {
+          const mediaStream = await ensureSharedMicStream();
+
+          if (session.closed) {
+            return;
+          }
+
+          const audioContext = new AudioContext();
+          const sourceNode = audioContext.createMediaStreamSource(mediaStream);
+          const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+          session.mediaStream = mediaStream;
+          session.audioContext = audioContext;
+          session.sourceNode = sourceNode;
+          session.processor = processor;
+
+          processor.onaudioprocess = (event) => {
+            if (!session.started || session.closed || ws.readyState !== WebSocket.OPEN) {
+              return;
+            }
+            const inputData = event.inputBuffer.getChannelData(0);
+            const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, ALIYUN_AUDIO_SAMPLE_RATE);
+            const pcmBuffer = floatTo16BitPCM(downsampled);
+            ws.send(pcmBuffer);
+          };
+
+          sourceNode.connect(processor);
+          processor.connect(audioContext.destination);
+          setSayState('已经连接阿里云，正在等你说话。', '正在聆听……', 'Moy：嗯，我在听。');
+        } catch (error) {
+          await failSession('麦克风权限没有打开或无法使用。', '请允许网页访问麦克风后再试。', 'Moy：我想听你说，但现在还没拿到麦克风。');
+        }
+      };
+
+      ws.onmessage = async (event) => {
+        if (session.closed || typeof event.data !== 'string') {
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
+
+        const eventName = data?.header?.name;
+        const status = data?.header?.status;
+        if (status && status !== 20000000) {
+          await failSession(`阿里云识别返回异常：${status}`, speechBuffer || '刚才的语音没有顺利识别。', 'Moy：我刚刚在听的时候被打断了，我们再试一次好不好？');
+          return;
+        }
+
+        if (eventName === 'TranscriptionStarted') {
+          session.started = true;
+          setSayState('阿里云正在实时听写中，再点一次 say 结束。', speechBuffer || '正在聆听……', 'Moy：你慢慢说，我在认真听。');
+          return;
+        }
+
+        if (eventName === 'TranscriptionResultChanged' || eventName === 'SentenceEnd') {
+          const nextText = extractTranscriptText(data.payload).trim();
+          if (nextText) {
+            speechBuffer = nextText;
+            setSayState('阿里云正在实时听写中，再点一次 say 结束。', nextText, 'Moy：嗯，我在认真听。');
+          }
+          return;
+        }
+
+        if (eventName === 'TranscriptionCompleted') {
+          session.completed = true;
+          try {
+            await cleanup();
+          } finally {
+            if (aliyunSpeechSession === session) {
+              aliyunSpeechSession = null;
+            }
+          }
+        }
+      };
+
+      ws.onerror = async () => {
+        if (session.closed) {
+          return;
+        }
+        await failSession('阿里云实时识别连接失败。', speechBuffer || '连接阿里云时出了点问题。', 'Moy：我刚刚没能顺利连上耳朵，我们再试一次。');
+      };
+
+      ws.onclose = async () => {
+        if (session.closed) {
+          return;
+        }
+        session.closed = true;
+        await cleanup();
+        if (!session.completed && aliyunSpeechSession === session) {
+          aliyunSpeechSession = null;
+          if (speechBuffer.trim()) {
+            setSayState('识别结束，准备回复中……', speechBuffer.trim(), 'Moy：我正在把你刚才的话放进心里。');
+          }
+        }
+      };
+    }
+
+    function stopSpeechInput() {
+      if (!isPressTalking) {
+        return;
+      }
+      isPressTalking = false;
+
+      const session = aliyunSpeechSession;
+      if (session?.ws && session.ws.readyState === WebSocket.OPEN) {
+        try {
+          session.ws.send(JSON.stringify({
+            header: {
+              message_id: createHexId(),
+              task_id: session.taskId,
+              namespace: 'SpeechTranscriber',
+              name: 'StopTranscription',
+              appkey: ALIYUN_ISI_APPKEY,
+            },
+          }));
+        } catch (error) {
+          // ignore
+        }
+        window.setTimeout(() => {
+          try {
+            session.ws.close();
+          } catch (error) {
+            // ignore
+          }
+        }, ALIYUN_AUDIO_CHUNK_MS * 2);
+      }
+      finishSpeechInput();
+    }
+
+    function updateDebugStatus(extraText = '') {
+      const hairOverlayEl = document.getElementById('hairOverlay');
+      const hairOpen = !!hairOverlayEl && hairOverlayEl.classList.contains('open');
+      debugStatus.innerHTML = `waike: ${currentIndex}<br>切换状态: ${switching ? '切换中' : '空闲'}<br>发型框: ${hairOpen ? '打开' : '关闭'}${extraText ? `<br>${extraText}` : ''}`;
+    }
+
+    function clearFocusFaceTimers() {
+      window.clearTimeout(focusFaceEyeTimer);
+      window.clearTimeout(focusFaceMouthTimer);
+      focusFaceEyeTimer = null;
+      focusFaceMouthTimer = null;
+    }
+
+    function startFocusFaceMode() {
+      if (focusFaceMode || focusFaceEnding || irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        return;
+      }
+
+      clearFocusFaceTimers();
+      focusFaceMode = true;
+      eyeManualPlaying = true;
+      mouthManualPlaying = true;
+
+      const eyeGif = Math.random() < 0.5 ? './jb/eye/1b8.GIF' : './jb/eye/1b9.GIF';
+      const mouthGif = Math.random() < 0.5 ? './jb/mouse/1b7.GIF' : './jb/mouse/1b8.GIF';
+      const eyeStill = eyeGif.includes('1b8') ? './jb/eye/7.PNG' : './jb/eye/8.PNG';
+      const mouthStill = mouthGif.includes('1b7') ? './jb/mouse/7.PNG' : './jb/mouse/8.PNG';
+
+      petEye.src = `${eyeGif}?t=${Date.now()}`;
+      petMouth.src = `${mouthGif}?t=${Date.now()}`;
+
+      focusFaceEyeTimer = window.setTimeout(() => {
+        if (!focusFaceMode) {
+          return;
+        }
+        petEye.src = eyeStill;
+        eyeManualPlaying = false;
+        focusFaceEyeTimer = null;
+      }, 1500);
+
+      focusFaceMouthTimer = window.setTimeout(() => {
+        if (!focusFaceMode) {
+          return;
+        }
+        petMouth.src = mouthStill;
+        mouthManualPlaying = false;
+        focusFaceMouthTimer = null;
+      }, 1200);
+    }
+
+    function endFocusFaceMode() {
+      if ((!focusFaceMode && !focusFaceEnding) || irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        return;
+      }
+
+      clearFocusFaceTimers();
+      focusFaceMode = false;
+      focusFaceEnding = true;
+      eyeManualPlaying = true;
+      mouthManualPlaying = true;
+
+      const eyeGif = Math.random() < 0.5 ? './jb/eye/8b1.GIF' : './jb/eye/9b1.GIF';
+      const mouthGif = Math.random() < 0.5 ? './jb/mouse/7b1.GIF' : './jb/mouse/8b1.GIF';
+
+      petEye.src = `${eyeGif}?t=${Date.now()}`;
+      petMouth.src = `${mouthGif}?t=${Date.now()}`;
+
+      focusFaceEyeTimer = window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        eyeManualPlaying = false;
+        focusFaceEyeTimer = null;
+        if (!mouthManualPlaying) {
+          focusFaceEnding = false;
+        }
+      }, 1500);
+
+      focusFaceMouthTimer = window.setTimeout(() => {
+        petMouth.src = './jb/mouse/1.PNG';
+        mouthManualPlaying = false;
+        focusFaceMouthTimer = null;
+        if (!eyeManualPlaying) {
+          focusFaceEnding = false;
+        }
+      }, 1200);
+    }
+
+    function resetPetClickBurst() {
+      petClickCount = 0;
+      petClickWindowStart = Date.now();
+      irritationThreshold = Math.floor(Math.random() * 16) + 15;
+    }
+
+    function setMouthState(src) {
+      petMouth.src = src;
+    }
+
+    function playMouthSequence(steps, onDone) {
+      mouthManualPlaying = true;
+      let index = 0;
+
+      function next() {
+        if (index >= steps.length) {
+          mouthManualPlaying = false;
+          if (onDone) onDone();
+          return;
+        }
+
+        const step = steps[index++];
+        petMouth.src = `${step.src}?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petMouth.src = step.next;
+          next();
+        }, step.duration);
+      }
+
+      next();
+    }
+
+    function beginIrritationMode() {
+      if (irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        return;
+      }
+
+      window.clearTimeout(idleTimer);
+      irritationTransitioning = true;
+      eyeManualPlaying = true;
+      window.clearTimeout(irritationRecoveryTimer);
+      petEye.src = `./jb/eye/1b5.GIF?t=${Date.now()}`;
+      playMouthSequence([
+        { src: './jb/mouse/1b2.GIF', next: './jb/mouse/2.PNG', duration: 1200 },
+        { src: './jb/mouse/2b3.GIF', next: './jb/mouse/3.PNG', duration: 1200 },
+      ], () => {
+        setMouthState('./jb/mouse/3.PNG');
+      });
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/5.PNG';
+        eyeManualPlaying = false;
+        irritationTransitioning = false;
+        irritationMode = true;
+        applyPetMotionProfile('irritated');
+        resetPetClickBurst();
+        irritationRecoveryTimer = window.setTimeout(endIrritationMode, 10000);
+      }, 2400);
+    }
+
+    function endIrritationMode() {
+      if (!irritationMode || irritationTransitioning) {
+        return;
+      }
+
+      irritationTransitioning = true;
+      irritationMode = false;
+      eyeManualPlaying = true;
+      window.clearTimeout(irritationRecoveryTimer);
+      petEye.src = `./jb/eye/5b1.GIF?t=${Date.now()}`;
+      playMouthSequence([
+        { src: './jb/mouse/3b2.GIF', next: './jb/mouse/2.PNG', duration: 1200 },
+        { src: './jb/mouse/2b1.GIF', next: './jb/mouse/1.PNG', duration: 1200 },
+      ], () => {
+        setMouthState('./jb/mouse/1.PNG');
+      });
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        eyeManualPlaying = false;
+        irritationTransitioning = false;
+        applyPetMotionProfile('normal');
+        resetPetClickBurst();
+        startIdleTimer();
+      }, 2400);
+    }
+
+    function registerPetBurstClick() {
+      const now = Date.now();
+      if (now - petClickWindowStart > 30000) {
+        resetPetClickBurst();
+      }
+      petClickCount += 1;
+      if (petClickCount >= irritationThreshold) {
+        triggerPetMoodBurst(2);
+        beginIrritationMode();
+      }
+    }
+
+    function applyPetMotionProfile(profile) {
+      window.clearTimeout(alertAftershockTimer);
+      if (profile === 'sleepy') {
+        stagePet.style.setProperty('--drift-amp-mult', '0.4');
+        stagePet.style.setProperty('--bob-amp-mult', '0.4');
+        stagePet.style.setProperty('--motion-speed-mult', '1.28');
+        stagePet.style.setProperty('--part-motion-mult', '0.55');
+        setMouthState('./jb/mouse/2.PNG');
+        return;
+      }
+
+      if (profile === 'irritated') {
+        stagePet.style.setProperty('--drift-amp-mult', '0.58');
+        stagePet.style.setProperty('--bob-amp-mult', '0.58');
+        stagePet.style.setProperty('--motion-speed-mult', '1.16');
+        stagePet.style.setProperty('--part-motion-mult', '0.7');
+        setMouthState('./jb/mouse/3.PNG');
+        return;
+      }
+
+      if (profile === 'alert') {
+        stagePet.style.setProperty('--drift-amp-mult', '1.1');
+        stagePet.style.setProperty('--bob-amp-mult', '1.1');
+        stagePet.style.setProperty('--motion-speed-mult', '0.9');
+        stagePet.style.setProperty('--part-motion-mult', '1.1');
+        return;
+      }
+
+      if (profile === 'alert-aftershock') {
+        stagePet.style.setProperty('--drift-amp-mult', '1.04');
+        stagePet.style.setProperty('--bob-amp-mult', '1.04');
+        stagePet.style.setProperty('--motion-speed-mult', '0.96');
+        stagePet.style.setProperty('--part-motion-mult', '1.04');
+        alertAftershockTimer = window.setTimeout(() => {
+          applyPetMotionProfile('normal');
+        }, 2000);
+        return;
+      }
+
+      stagePet.style.setProperty('--drift-amp-mult', '1');
+      stagePet.style.setProperty('--bob-amp-mult', '1');
+      stagePet.style.setProperty('--motion-speed-mult', '1');
+      stagePet.style.setProperty('--part-motion-mult', '1');
+      setMouthState('./jb/mouse/1.PNG');
+    }
+
+    function triggerWakeShake(type) {
+      stagePet.classList.remove('wake-shake-sleepy', 'wake-shake-alert');
+      void stagePet.offsetWidth;
+      stagePet.classList.add(type === 'sleepy' ? 'wake-shake-sleepy' : 'wake-shake-alert');
+    }
+
+    function startIdleTimer() {
+      window.clearTimeout(idleTimer);
+      if (irritationMode || irritationTransitioning) {
+        return;
+      }
+      idleTimer = window.setTimeout(triggerIdleMode, 30000);
+    }
+
+    function finishIdleWake(nextProfile = 'normal') {
+      idleMode = null;
+      idleAwakening = false;
+      applyPetMotionProfile(nextProfile);
+      startIdleTimer();
+    }
+
+    function wakeFromIdle() {
+      if (!idleMode || idleAwakening) {
+        return;
+      }
+
+      idleAwakening = true;
+      eyeManualPlaying = true;
+      const wakingMode = idleMode;
+      triggerWakeShake(wakingMode);
+
+      if (wakingMode === 'sleepy') {
+        petEye.src = `./jb/eye/6b1.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = conversationEmotion && !emotionEyeEnding ? './jb/eye/6.PNG' : './jb/eye/1.PNG';
+          eyeManualPlaying = false;
+          finishIdleWake('normal');
+        }, 1500);
+        return;
+      }
+
+      petEye.src = `./jb/eye/2b1.GIF?t=${Date.now()}`;
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        eyeManualPlaying = false;
+        finishIdleWake('alert-aftershock');
+      }, 1500);
+    }
+
+    function triggerIdleMode() {
+      if (idleMode || eyeManualPlaying || idleAwakening || irritationMode || irritationTransitioning) {
+        startIdleTimer();
+        return;
+      }
+
+      eyeManualPlaying = true;
+      const nextMode = Math.random() < 0.5 ? 'sleepy' : 'alert';
+      idleMode = nextMode;
+
+      if (nextMode === 'sleepy') {
+        petEye.src = `./jb/eye/1b6.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          petEye.src = './jb/eye/6.PNG';
+          eyeManualPlaying = false;
+          applyPetMotionProfile('sleepy');
+        }, 1500);
+        return;
+      }
+
+      petEye.src = `./jb/eye/1b2.GIF?t=${Date.now()}`;
+      window.setTimeout(() => {
+        petEye.src = './jb/eye/2.PNG';
+        eyeManualPlaying = false;
+        applyPetMotionProfile('alert');
+      }, 1500);
+    }
+
+    function markInteraction() {
+      if (irritationMode) {
+        window.clearTimeout(irritationRecoveryTimer);
+        irritationRecoveryTimer = window.setTimeout(endIrritationMode, 10000);
+      }
+      if (idleMode) {
+        wakeFromIdle();
+        return;
+      }
+      startIdleTimer();
+    }
+
+    function playEyeManual(gifSrc, gifPlayMs = 1500) {
+      if (irritationMode || irritationTransitioning) {
+        return;
+      }
+      if (idleMode) {
+        wakeFromIdle();
+        return;
+      }
+
+      window.clearTimeout(eyeManualResetTimer);
+      eyeManualPlaying = true;
+      petEye.src = `${gifSrc}?t=${Date.now()}`;
+      eyeManualResetTimer = window.setTimeout(() => {
+        petEye.src = './jb/eye/1.PNG';
+        eyeManualPlaying = false;
+        eyeManualResetTimer = null;
+      }, gifPlayMs);
+    }
+
+    function randomDelay(minMs, maxMs) {
+      return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    }
+
+    function playGifThenSet(img, gifSrc, nextSrc, delayMs, gifPlayMs, onDone) {
+      window.setTimeout(() => {
+        img.src = `${gifSrc}?t=${Date.now()}`;
+        window.setTimeout(() => {
+          img.src = nextSrc;
+          if (onDone) onDone();
+        }, gifPlayMs);
+      }, delayMs);
+    }
+
+    function scheduleEyeLoop() {
+      const delayMs = randomDelay(5000, 10000);
+      window.setTimeout(() => {
+        if (focusFaceMode || focusFaceEnding || eyeManualPlaying || idleMode || idleAwakening || irritationMode || irritationTransitioning) {
+          scheduleEyeLoop();
+          return;
+        }
+        petEye.src = `./jb/eye/zy.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          if (!focusFaceMode && !focusFaceEnding && !idleMode && !idleAwakening && !irritationMode && !irritationTransitioning) {
+            petEye.src = './jb/eye/1.PNG';
+          }
+          scheduleEyeLoop();
+        }, 1500);
+      }, delayMs);
+    }
+
+    function scheduleMouthOne() {
+      const delayMs = randomDelay(5000, 15000);
+      window.setTimeout(() => {
+        if (focusFaceMode || focusFaceEnding || idleMode === 'sleepy' || idleAwakening || irritationMode || irritationTransitioning || mouthManualPlaying) {
+          scheduleMouthOne();
+          return;
+        }
+        petMouth.src = `./jb/mouse/1b2.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          setMouthState('./jb/mouse/2.PNG');
+          scheduleMouthTwo();
+        }, 1200);
+      }, delayMs);
+    }
+
+    function scheduleMouthTwo() {
+      const delayMs = randomDelay(5000, 15000);
+      window.setTimeout(() => {
+        if (focusFaceMode || focusFaceEnding || idleMode === 'sleepy' || idleAwakening || irritationMode || irritationTransitioning || mouthManualPlaying) {
+          scheduleMouthTwo();
+          return;
+        }
+        petMouth.src = `./jb/mouse/2b1.GIF?t=${Date.now()}`;
+        window.setTimeout(() => {
+          if (idleMode === 'sleepy') {
+            setMouthState('./jb/mouse/2.PNG');
+          } else {
+            setMouthState('./jb/mouse/1.PNG');
+          }
+          scheduleMouthOne();
+        }, 1200);
+      }, delayMs);
+    }
+
+    petEye.src = './jb/eye/1.PNG';
+    petMouth.src = './jb/mouse/1.PNG';
+    applyPetMotionProfile('normal');
+    scheduleEyeLoop();
+    scheduleMouthOne();
+    startIdleTimer();
+
+    stagePet.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      const inWaikeHitArea = isInWaikeHitArea(event);
+      if (!inWaikeHitArea) {
+        markInteraction();
+        return;
+      }
+
+      markInteraction();
+      registerPetBurstClick();
+      if (irritationMode || irritationTransitioning || idleMode || idleAwakening) {
+        return;
+      }
+
+      const x = event.clientX - waikeHitRect.left;
+      const ratio = x / waikeHitRect.width;
+
+      if (ratio < 0.33) {
+        playEyeManual('./jb/eye/zyz.GIF');
+      } else if (ratio > 0.66) {
+        playEyeManual('./jb/eye/yzz.GIF');
+      } else {
+        playEyeManual('./jb/eye/zy.GIF');
+      }
+    });
+
+    document.addEventListener('keydown', markInteraction);
+    document.addEventListener('wheel', markInteraction, { passive: true });
+
+    function isInWaikeHitArea(event) {
+      if (!waikeHitRect) {
+        return false;
+      }
+      return event.clientX >= waikeHitRect.left && event.clientX <= waikeHitRect.left + waikeHitRect.width && event.clientY >= waikeHitRect.top && event.clientY <= waikeHitRect.top + waikeHitRect.height;
+    }
+
+    // Compute the actual rendered content rect of the waike image (object-fit:contain)
+    // and position/size the pet within that rect.
+    function fitPetToImage() {
+      const img = waikeImage;
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const stageRect = centerStage.getBoundingClientRect();
+      const sw = stageRect.width, sh = stageRect.height;
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      // Compute rendered size under object-fit:contain
+      const scale = Math.min(sw / iw, sh / ih);
+      const rw = iw * scale, rh = ih * scale;
+      // Offset of image content rect within center-stage
+      const ox = (sw - rw) / 2;
+      const oy = (sh - rh) / 2;
+      waikeHitRect = {
+        left: stageRect.left + ox,
+        top: stageRect.top + oy,
+        width: rw,
+        height: rh,
+      };
+      // Pet fills ~55% of the smaller rendered dimension
+      const petPx = Math.min(rw, rh) * 0.55;
+      // Pet center = center of the rendered image content rect
+      const petCx = ox + rw * 0.5;
+      const petCy = oy + rh * 0.5;
+      stagePet.style.setProperty('--pet-left', petCx + 'px');
+      stagePet.style.setProperty('--pet-top',  petCy + 'px');
+      stagePet.style.setProperty('--pet-size', petPx + 'px');
+      // Scale drift/bob amplitudes to pet size
+      const driftPx = petPx * 0.04;
+      const bobPx   = petPx * 0.03;
+      stagePet.style.setProperty('--drift-amp', driftPx + 'px');
+      stagePet.style.setProperty('--bob-amp',  '-' + bobPx + 'px');
+      petDrift.style.setProperty('--drift-base-dur', rf(4.8,7.0)+'s');
+      petBob.style.setProperty('--bob-base-dur', rf(2.8,4.2)+'s');
+    }
+
+    waikeImage.addEventListener('load', fitPetToImage);
+    if (waikeImage.complete && waikeImage.naturalWidth) fitPetToImage();
+    new ResizeObserver(fitPetToImage).observe(centerStage);
+
+    const cache = {};
+    for (let i=1;i<=total;i++){const m=new Image();m.src=`./ym/waike/${i}.PNG`;cache[i]=m;}
+
+    function updateActiveButton(idx){
+      document.querySelectorAll('.anjian-btn').forEach(b=>b.classList.toggle('active',Number(b.dataset.index)===idx));
+    }
+    function setActive(index, animate=true){
+      if(index===currentIndex&&animate)return;
+      if(switching)return;
+      const src=`./ym/waike/${index}.PNG`, alt=`waike ${index}`;
+      applyBackground(index);
+      if(!animate){waikeImage.src=src;waikeImage.alt=alt;currentIndex=index;updateActiveButton(index);updateDebugStatus('左键切到: '+index);return;}
+      switching=true;
+      currentIndex=index;
+      updateActiveButton(index);
+      updateDebugStatus('左键点击: '+index+'，开始切换');
+      requestAnimationFrame(()=>{
+        waikeImage.classList.add('switching');
+        setTimeout(()=>{
+          requestAnimationFrame(()=>{
+            waikeImage.src=src;waikeImage.alt=alt;
+            const done=()=>requestAnimationFrame(()=>{waikeImage.classList.remove('switching');switching=false;waikeImage.onload=null;waikeImage.onerror=null;updateDebugStatus('切换完成: '+index);});
+            waikeImage.onload=done;
+            waikeImage.onerror=done;
+            if(waikeImage.complete)done();
+          });
+        },180);
+      });
+    }
+    for(let i=1;i<=total;i++){
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='anjian-btn';b.dataset.index=String(i);
+      b.innerHTML=`<img src="./ym/anjian/${i}.PNG" alt="anjian ${i}" />`;
+      b.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();resetFeedingMoodState();updateDebugStatus('左键按下: '+i);setActive(i,true);});
+      b.addEventListener('click',(event)=>{event.preventDefault();event.stopPropagation();resetFeedingMoodState();updateDebugStatus('左键点击: '+i);setActive(i,true);});
+      anjianList.appendChild(b);
+    }
+
+
+    // Morandi background palette per waike index
+    const bgColors = {
+      1: '#c9919a', // 深粉
+      2: '#ede8d5', // 偏黄奶白
+      3: '#dce6e8', // 偏蓝奶白
+      4: '#a8cdd4', // 水蓝
+      5: '#e8d5d0', // 偏红奶白
+      6: '#f0dde2', // 浅粉
+    };
+    function applyBackground(index) {
+      diBackground.src = `./ym/di/${index}.PNG`;
+      document.body.style.backgroundColor = bgColors[index] || '#ffffff';
+    }
+    applyBackground(1);
+    setActive(1,false);
+    loadConversationMemory();
+    hydrateSayHistoryFromMemory();
+    if (conversationHistory.length >= 2) {
+      const lastUserTurn = conversationHistory[conversationHistory.length - 2];
+      const lastAssistantTurn = conversationHistory[conversationHistory.length - 1];
+      if (lastUserTurn?.role === 'user') {
+        sayUser.textContent = `你：${lastUserTurn.content}`;
+      }
+      if (lastAssistantTurn?.role === 'assistant') {
+        sayReply.textContent = `Moy：${lastAssistantTurn.content}`;
+      }
+    }
+
+    const hairOverlay = document.getElementById('hairOverlay');
+    const hair1Grid   = document.getElementById('hair1Grid');
+    const hair2Grid   = document.getElementById('hair2Grid');
+    const petHair1    = document.getElementById('petHair1');
+    const petHair2    = document.getElementById('petHair2');
+    const HTOTAL = 9;
+    let selH1=1, selH2=null;
+
+    function buildGrid(container, folder, htotal, selIdx, onPick){
+      container.innerHTML='';
+      for(let i=1;i<=htotal;i++){
+        const el=document.createElement('div');
+        el.className='hair-item'+(selIdx===i?' selected':'');
+        const img=document.createElement('img');
+        img.src=`./jb/${folder}/${i}.PNG`;img.alt=`${folder} ${i}`;
+        el.appendChild(img);
+        el.addEventListener('click',()=>{
+          container.querySelectorAll('.hair-item').forEach(x=>x.classList.remove('selected'));
+          el.classList.add('selected');
+          onPick(i);
+        });
+        container.appendChild(el);
+      }
+    }
+    function openHair(){
+      buildGrid(hair1Grid,'hair1',HTOTAL,selH1,(i)=>{selH1=i;petHair1.src=`./jb/hair1/${i}.PNG`;updateDebugStatus('前发选择: '+i);});
+      buildGrid(hair2Grid,'hair2',HTOTAL,selH2,(i)=>{selH2=i;petHair2.src=`./jb/hair2/${i}.PNG`;petHair2.style.display='';updateDebugStatus('后发选择: '+i);});
+      hairOverlay.classList.add('open');
+      updateDebugStatus('点击了右3，发型框打开');
+    }
+    document.getElementById('hairBtn').addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();updateDebugStatus('右3按下');openHair();});
+    document.getElementById('hairBtn').addEventListener('click',(event)=>{event.preventDefault();event.stopPropagation();updateDebugStatus('右3点击');openHair();});
+    const homeBtn = document.getElementById('homeBtn');
+    homeBtn.addEventListener('click', () => {
+      updateDebugStatus('右4返回桌面');
+    });
+    document.getElementById('hairClose').addEventListener('click',()=>{hairOverlay.classList.remove('open');updateDebugStatus('发型框关闭');});
+    hairOverlay.addEventListener('click',(e)=>{if(e.target===hairOverlay){hairOverlay.classList.remove('open');updateDebugStatus('点击遮罩关闭');}});
+    const hudongButtons = document.querySelectorAll('.hudong-btn');
+    const toggleFoodCloud = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (foodShown) {
+        foodShown = false;
+        hideFoodAroundWaike();
+        stopMediaPipeMode();
+        return;
+      }
+      showFoodAroundWaike();
+      startMediaPipeMode('feed');
+    };
+    hudongButtons[0].addEventListener('pointerdown', toggleFoodCloud);
+    hudongButtons[0].addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); });
+    hudongButtons[1].addEventListener('pointerdown', (event) => { event.preventDefault(); event.stopPropagation(); startMediaPipeMode('pet'); });
+    hudongButtons[1].addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); });
+    async function prewarmMicrophone() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        return;
+      }
+      try {
+        await ensureSharedMicStream();
+      } catch (error) {
+        // 用户未授权时保持静默，等用户主动点击 say 再提示
+      }
+    }
+
+    sayBtn.addEventListener('click',(event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      stopMoySpeech();
+      if (isPressTalking) {
+        stopSpeechInput();
+      } else {
+        startSpeechInput();
+      }
+    });
+    playBackgroundMusic();
+    window.addEventListener('beforeunload', () => {
+      stopMoySpeech();
+      stopBackgroundMusic();
+      stopMediaPipeMode();
+      if (sharedMicStream) {
+        sharedMicStream.getTracks().forEach((track) => track.stop());
+      }
+    });
+    prewarmMicrophone();
+    updateDebugStatus();
+  </script>
+</body>
+</html>

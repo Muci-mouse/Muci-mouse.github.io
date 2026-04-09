@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moy 桌面模拟</title>
+  <style>
+    :root {
+      --label-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+      --dock-bg: rgba(16, 20, 28, 0.55);
+      --dock-border: rgba(255, 255, 255, 0.24);
+      --font: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font);
+    }
+
+    .desktop {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.35)),
+        url("./bz.jpg") center/cover no-repeat;
+      position: relative;
+    }
+
+    .desktop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12), transparent 38%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08), transparent 34%);
+      pointer-events: none;
+    }
+
+    .icons {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, 110px);
+      gap: 22px 14px;
+      z-index: 2;
+    }
+
+    .icon {
+      width: 110px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      border-radius: 12px;
+      transition: background-color .2s ease, transform .2s ease;
+      cursor: pointer;
+    }
+
+    .icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .icon-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+
+    .icon-badge.image {
+      padding: 0;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.38);
+    }
+
+    .icon-badge.image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 16px;
+      display: block;
+    }
+
+    .icon-badge::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(150deg, rgba(255,255,255,0.24), transparent 44%);
+      pointer-events: none;
+    }
+
+    .wechat { background: linear-gradient(135deg, #1ccf6f, #00a95a); font-size: 28px; }
+    .quark { background: linear-gradient(135deg, #4489ff, #1f57f0); font-size: 28px; }
+    .foxmail { background: linear-gradient(135deg, #ff7f50, #ff5a3d); font-size: 15px; }
+    .music { background: linear-gradient(135deg, #ff375f, #cf193f); font-size: 26px; }
+
+    .icon-label {
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.25;
+      text-shadow: var(--label-shadow);
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+
+    .taskbar {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 14px;
+      width: min(780px, calc(100% - 24px));
+      height: 54px;
+      border-radius: 16px;
+      background: var(--dock-bg);
+      border: 1px solid var(--dock-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 3;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.35);
+    }
+
+    .taskbar-icons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .task-mini {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 16px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .clock {
+      color: #fff;
+      text-shadow: var(--label-shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .clock strong {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .desktop-pet {
+      position: absolute;
+      right: 18px;
+      bottom: 78px;
+      width: 195px;
+      aspect-ratio: 1;
+      z-index: 4;
+      cursor: grab;
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
+    }
+
+    .desktop-pet.dragging {
+      cursor: grabbing;
+    }
+
+    .desktop-pet.rebound {
+      animation: petRebound 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .desktop-pet-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      animation: petFloat var(--float-duration, 3.2s) ease-in-out infinite;
+      animation-delay: var(--float-delay, 0s);
+    }
+
+    .desktop-pet img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+      transform-origin: center;
+    }
+
+    .desktop-pet .part-body {
+      animation: bodyBreath var(--body-duration, 2.6s) ease-in-out infinite;
+      animation-delay: var(--body-delay, 0s);
+    }
+
+    .desktop-pet .part-eye {
+      animation: eyeSway var(--eye-duration, 2.2s) ease-in-out infinite;
+      animation-delay: var(--eye-delay, 0s);
+    }
+
+    .desktop-pet .part-mouth {
+      animation: mouthBop var(--mouth-duration, 1.9s) ease-in-out infinite;
+      animation-delay: var(--mouth-delay, 0s);
+    }
+
+    .desktop-pet .part-hair {
+      transform-origin: center top;
+      animation: hairSwing var(--hair-duration, 2.4s) ease-in-out infinite;
+      animation-delay: var(--hair-delay, 0s);
+    }
+
+    .pet-frame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: transparent;
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+    }
+
+    .pet-frame.active {
+      display: block;
+      pointer-events: auto;
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      z-index: 20;
+      background-color: #f8f2ff;
+      background-image:
+        linear-gradient(0deg, rgba(255,255,255,0.18) 50%, transparent 50%),
+        linear-gradient(90deg, rgba(255,255,255,0.18) 50%, transparent 50%),
+        linear-gradient(135deg, #ffd9e8 0%, #ffeebd 28%, #d9f5ff 56%, #efe1ff 78%, #ffe1ef 100%);
+      background-size: 28px 28px, 28px 28px, 100% 100%;
+      background-position: 0 0, 0 0, center;
+      animation: loadingPixelShift 8s steps(8) infinite;
+      isolation: isolate;
+    }
+
+    .loading-screen.active {
+      display: flex;
+    }
+
+    .loading-screen::before,
+    .loading-screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .loading-screen::before {
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.08) 50%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.08) 50%, transparent 50%);
+      background-size: 56px 56px;
+      mix-blend-mode: soft-light;
+      opacity: 0.8;
+      animation: loadingGridPulse 1.8s steps(3) infinite;
+    }
+
+    .loading-screen::after {
+      inset: 8%;
+      background:
+        radial-gradient(circle at 18% 26%, rgba(255,255,255,0.55), transparent 12%),
+        radial-gradient(circle at 80% 18%, rgba(255,255,255,0.4), transparent 14%),
+        radial-gradient(circle at 24% 78%, rgba(255,255,255,0.35), transparent 13%),
+        radial-gradient(circle at 74% 76%, rgba(255,255,255,0.42), transparent 15%);
+      filter: blur(18px);
+      opacity: 0.75;
+      animation: loadingSparkle 7s steps(6) infinite;
+    }
+
+    .loading-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      z-index: 1;
+      filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.45));
+    }
+
+    .loading-label {
+      position: absolute;
+      left: 50%;
+      bottom: 42px;
+      transform: translateX(-50%);
+      z-index: 2;
+      font-family: "Courier New", "Lucida Console", monospace;
+      font-size: clamp(20px, 2.8vw, 34px);
+      letter-spacing: 0.24em;
+      color: #fffdf7;
+      text-transform: uppercase;
+      text-shadow:
+        4px 0 0 rgba(141, 110, 163, 0.95),
+        -4px 0 0 rgba(141, 110, 163, 0.95),
+        0 4px 0 rgba(141, 110, 163, 0.95),
+        0 -4px 0 rgba(141, 110, 163, 0.95),
+        0 8px 18px rgba(255, 255, 255, 0.55);
+      animation: loadingDots 1.2s steps(4) infinite;
+      white-space: nowrap;
+    }
+
+    @keyframes loadingPixelShift {
+      0% {
+        background-position: 0 0, 0 0, 0% 50%;
+      }
+      25% {
+        background-position: 14px 0, 0 14px, 22% 50%;
+      }
+      50% {
+        background-position: 28px 14px, 14px 28px, 50% 50%;
+      }
+      75% {
+        background-position: 14px 28px, 28px 14px, 78% 50%;
+      }
+      100% {
+        background-position: 0 0, 0 0, 100% 50%;
+      }
+    }
+
+    @keyframes loadingGridPulse {
+      0%,
+      100% {
+        opacity: 0.45;
+      }
+      50% {
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes loadingSparkle {
+      0% {
+        transform: translate(0, 0);
+      }
+      50% {
+        transform: translate(12px, -8px);
+      }
+      100% {
+        transform: translate(-8px, 10px);
+      }
+    }
+
+    @keyframes loadingDots {
+      0% {
+        clip-path: inset(0 0 0 0);
+      }
+      25% {
+        clip-path: inset(0 0 0 0);
+      }
+      50% {
+        clip-path: inset(0 -0.34em 0 0);
+      }
+      75% {
+        clip-path: inset(0 -0.68em 0 0);
+      }
+      100% {
+        clip-path: inset(0 -1.02em 0 0);
+      }
+    }
+
+    @keyframes bodyBreath {
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        transform: translateY(-1.5px) scale(1.008);
+      }
+    }
+
+    @keyframes eyeSway {
+      0%,
+      100% {
+        transform: translateX(0) translateY(0);
+      }
+      50% {
+        transform: translateX(1.5px) translateY(-0.5px);
+      }
+    }
+
+    @keyframes mouthBop {
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        transform: translateY(1px) scale(0.992);
+      }
+    }
+
+    @keyframes hairSwing {
+      0%,
+      100% {
+        transform: rotate(0deg) translateY(0);
+      }
+      50% {
+        transform: rotate(1.4deg) translateY(-1.5px);
+      }
+    }
+
+    @keyframes petRebound {
+      0% {
+        transform: translate(0, 0);
+      }
+      35% {
+        transform: translate(var(--rebound-x, 0px), var(--rebound-y, 0px));
+      }
+      65% {
+        transform: translate(calc(var(--rebound-x, 0px) * -0.45), calc(var(--rebound-y, 0px) * -0.45));
+      }
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+
+    @keyframes petFloat {
+      0% {
+        transform: translate(0, 0);
+      }
+      25% {
+        transform: translate(10px, -14px);
+      }
+      50% {
+        transform: translate(0, -22px);
+      }
+      75% {
+        transform: translate(-10px, -14px);
+      }
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="desktop">
+    <section class="icons">
+      <div class="icon" title="MOY" id="moyIcon">
+        <div class="icon-badge image"><img src="./moy.jpg" alt="MOY" /></div>
+        <div class="icon-label">MOY</div>
+      </div>
+
+      <div class="icon" title="微信">
+        <div class="icon-badge wechat">微</div>
+        <div class="icon-label">微信</div>
+      </div>
+
+      <div class="icon" title="夸克">
+        <div class="icon-badge quark">Q</div>
+        <div class="icon-label">夸克</div>
+      </div>
+
+      <div class="icon" title="Foxmail">
+        <div class="icon-badge foxmail">FOX</div>
+        <div class="icon-label">Foxmail</div>
+      </div>
+
+      <div class="icon" title="网易云音乐">
+        <div class="icon-badge music">♪</div>
+        <div class="icon-label">网易云音乐</div>
+      </div>
+    </section>
+
+    <footer class="taskbar">
+      <div class="taskbar-icons">
+        <div class="task-mini">⊞</div>
+        <div class="task-mini">🔍</div>
+        <div class="task-mini">📁</div>
+      </div>
+      <div class="clock" id="clock"></div>
+    </footer>
+
+    <section class="loading-screen" id="loadingScreen" aria-hidden="true">
+      <img class="loading-video" id="loadingVideo" src="./ym/kaiju.GIF" alt="MOY 加载动画" />
+      <div class="loading-label">LOADING...</div>
+    </section>
+
+    <iframe class="pet-frame" id="petFrame" src="./jb.html" title="MOY 桌宠" aria-hidden="true"></iframe>
+  </main>
+
+  <script>
+    const clock = document.getElementById("clock");
+    const moyIcon = document.getElementById("moyIcon");
+    const desktop = document.querySelector(".desktop");
+    const loadingScreen = document.getElementById("loadingScreen");
+    const petFrame = document.getElementById("petFrame");
+
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const date = now.toLocaleDateString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short",
+      });
+      clock.innerHTML = `<strong>${time}</strong><span>${date}</span>`;
+    }
+
+    function forwardActivity(event) {
+      if (!petFrame.classList.contains("active") || !petFrame.contentWindow) {
+        return;
+      }
+      petFrame.contentWindow.postMessage(event, "*");
+    }
+
+    function showDesktopPet() {
+      petFrame.classList.add("active");
+      petFrame.setAttribute("aria-hidden", "false");
+    }
+
+    function openMoyLoadingScreen() {
+      if (loadingScreen.classList.contains("active")) {
+        return;
+      }
+
+      loadingScreen.classList.add("active");
+      loadingScreen.setAttribute("aria-hidden", "false");
+
+      const loopCount = Math.floor(Math.random() * 3) + 1;
+      const gifDuration = 2200;
+      const totalDuration = loopCount * gifDuration;
+
+      window.setTimeout(() => {
+        window.location.href = "./ym.html";
+      }, totalDuration);
+    }
+
+    moyIcon.addEventListener("click", openMoyLoadingScreen);
+    document.addEventListener("pointerdown", () => forwardActivity({ type: "moy-activity", activity: "mouse" }), true);
+    document.addEventListener("keydown", () => forwardActivity({ type: "moy-activity", activity: "key" }), true);
+    window.addEventListener("message", (event) => {
+      if (event.data?.type === "moy-show-desktop-pet") {
+        showDesktopPet();
+      }
+    });
+
+    if (new URLSearchParams(window.location.search).get("showPet") === "1") {
+      showDesktopPet();
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
